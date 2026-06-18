@@ -1,0 +1,2771 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PhishGuard — Elite Email Threat Intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;500;600;700;800&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   css/base.css
+   Design tokens · Reset · Base · Background · Animations
+   ============================================================ */
+
+/* ---- DESIGN TOKENS ---- */
+:root {
+   --bg:        #0A1220;
+--bg2:       #101827;
+--bg3:       #152033;
+--bg4:       #1A2840;
+
+--glass:     rgba(18,27,45,0.75);
+--glassh:    rgba(23,35,58,0.90);
+
+--border:    rgba(255,255,255,0.05);
+--border2:   rgba(255,255,255,0.10);
+--border3:   rgba(0,183,255,0.18);
+
+--text:      #F5F9FF;
+--text2:     #B8C4D9;
+--muted:     #7D8AA5;
+
+--cyan:      #00B7FF;
+--cyan2:     #008FD1;
+--cyan3:     rgba(0,183,255,0.08);
+
+--purple:    #6D5DFC;
+--purple2:   rgba(109,93,252,0.15);
+
+--safe:      #14C38E;
+--safe-bg:   rgba(20,195,142,0.08);
+--safe-glow: rgba(20,195,142,0.25);
+
+--warn:      #F5A524;
+--warn-bg:   rgba(245,165,36,0.08);
+--warn-glow: rgba(245,165,36,0.25);
+
+--danger:    #EF4444;
+--danger-bg: rgba(239,68,68,0.08);
+--danger-glow: rgba(239,68,68,0.25);
+
+  --mono:      'Space Mono', monospace;
+  --display:   'Syne', sans-serif;
+  --body:      'IBM Plex Sans', sans-serif;
+
+  --r:         12px;
+  --r2:        20px;
+}
+
+/* ---- RESET ---- */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--body);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible { outline: 2px solid var(--cyan2); outline-offset: 2px; }
+
+/* ---- SCROLLBAR ---- */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+/* ---- ANIMATED BACKGROUND ---- */
+.bg-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.bg-grid {
+  position: absolute;
+  inset: -50%;
+  width: 200%;
+  height: 200%;
+  background-image:
+    linear-gradient(rgba(0,215,255,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,215,255,0.025) 1px, transparent 1px);
+  background-size: 48px 48px;
+  animation: gridDrift 60s linear infinite;
+}
+
+@keyframes gridDrift {
+  0%   { transform: translate(0,0); }
+  100% { transform: translate(48px,48px); }
+}
+
+.bg-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(100px);
+  animation: orbFloat 20s ease-in-out infinite alternate;
+}
+.bg-orb-1 {
+  width: 600px; height: 600px;
+  background: radial-gradient(circle, rgba(0,215,255,0.08) 0%, transparent 70%);
+  top: -200px; left: -200px;
+  animation-duration: 25s;
+}
+.bg-orb-2 {
+  width: 500px; height: 500px;
+  background: radial-gradient(circle, rgba(124,92,252,0.07) 0%, transparent 70%);
+  bottom: -150px; right: -150px;
+  animation-duration: 18s;
+  animation-direction: alternate-reverse;
+}
+.bg-orb-3 {
+  width: 300px; height: 300px;
+  background: radial-gradient(circle, rgba(255,61,90,0.05) 0%, transparent 70%);
+  top: 40%; left: 60%;
+  animation-duration: 30s;
+}
+@keyframes orbFloat {
+  0%   { transform: translate(0,0) scale(1); }
+  100% { transform: translate(40px,40px) scale(1.1); }
+}
+
+.radar-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid rgba(0,215,255,0.06);
+  animation: radarExpand 6s linear infinite;
+  top: 50%; left: 50%;
+  transform: translate(-50%,-50%);
+}
+.radar-ring:nth-child(1) { width: 200px; height: 200px; animation-delay: 0s; }
+.radar-ring:nth-child(2) { width: 400px; height: 400px; animation-delay: 2s; }
+.radar-ring:nth-child(3) { width: 600px; height: 600px; animation-delay: 4s; }
+
+@keyframes radarExpand {
+  0%   { opacity: 0.6; transform: translate(-50%,-50%) scale(0.95); }
+  100% { opacity: 0;   transform: translate(-50%,-50%) scale(1.3); }
+}
+
+/* ---- SHARED ANIMATIONS ---- */
+@keyframes pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 6px var(--safe); }
+  50%       { opacity: 0.6; box-shadow: 0 0 12px var(--safe); }
+}
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.3; }
+}
+@keyframes fadeSlide {
+  from { opacity: 0; transform: translateX(-10px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ---- UTILITY CLASSES ---- */
+.skeleton {
+  background: linear-gradient(90deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.04) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s linear infinite;
+  border-radius: 6px;
+}
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+/* ============================================================
+   css/layout.css
+   Page layout · Topbar · Sidebar · Main · Footer
+   ============================================================ */
+
+/* ---- LAYOUT GRID ---- */
+.layout {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  grid-template-rows: auto 1fr;
+  min-height: 100vh;
+}
+
+/* ---- TOPBAR ---- */
+.topbar {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  padding: 0 28px;
+  height: 64px;
+  background: var(--glass);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.brand-icon {
+  width: 36px; height: 36px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(0,215,255,0.15), rgba(124,92,252,0.15));
+  border: 1px solid var(--border3);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+  position: relative;
+  overflow: hidden;
+}
+.brand-icon::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(0,215,255,0.1), transparent);
+}
+
+.brand-name {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 18px;
+  color: var(--text);
+  letter-spacing: -0.3px;
+}
+.brand-name em { font-style: normal; color: var(--cyan); }
+
+.brand-badge {
+  font-family: var(--mono);
+  font-size: 9px;
+  background: rgba(0,215,255,0.1);
+  border: 1px solid rgba(0,215,255,0.2);
+  color: var(--cyan2);
+  padding: 2px 7px;
+  border-radius: 20px;
+  letter-spacing: 0.06em;
+  align-self: flex-start;
+  margin-top: 2px;
+}
+
+.topbar-center {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+}
+
+.status-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  padding: 6px 14px;
+  border-radius: 20px;
+}
+
+.status-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--safe);
+  box-shadow: 0 0 6px var(--safe);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.topbar-stat {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.topbar-stat .val { color: var(--cyan); font-weight: 700; }
+
+.hamburger {
+  display: none;
+  background: none;
+  border: 1px solid var(--border2);
+  color: var(--text2);
+  width: 36px; height: 36px;
+  border-radius: 8px;
+  font-size: 16px;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  margin-left: 8px;
+}
+.hamburger:hover { border-color: var(--cyan); color: var(--cyan); }
+
+/* ---- SIDEBAR ---- */
+.sidebar {
+  background: var(--glass);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-right: 1px solid var(--border);
+  padding: 24px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  position: sticky;
+  top: 64px;
+  height: calc(100vh - 64px);
+  overflow-y: auto;
+}
+
+.nav-section-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--muted);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  padding: 8px 12px 4px;
+  margin-top: 8px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid transparent;
+  text-decoration: none;
+}
+.nav-item:hover {
+  background: rgba(255,255,255,0.04);
+  color: var(--text2);
+  border-color: var(--border);
+}
+.nav-item.active {
+  background: rgba(0,215,255,0.08);
+  color: var(--cyan);
+  border-color: rgba(0,215,255,0.2);
+}
+
+.nav-item-icon {
+  width: 28px; height: 28px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+  border-radius: 6px;
+  background: rgba(255,255,255,0.03);
+  flex-shrink: 0;
+}
+.nav-item.active .nav-item-icon { background: rgba(0,215,255,0.1); }
+
+.nav-item-badge {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 10px;
+  background: var(--danger-bg);
+  color: var(--danger);
+  border: 1px solid rgba(255,61,90,0.2);
+  padding: 1px 6px;
+  border-radius: 10px;
+}
+
+.sidebar-footer {
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.sidebar-footer-text {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--muted);
+  text-align: center;
+  line-height: 1.7;
+}
+.sidebar-footer-text span { color: var(--cyan2); }
+
+/* ---- MAIN ---- */
+.main {
+  padding: 32px 32px 80px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  min-width: 0;
+}
+
+/* ---- FOOTER ---- */
+.site-footer {
+  grid-column: 1 / -1;
+  padding: 20px 32px;
+  border-top: 1px solid var(--border);
+  background: var(--glass);
+  backdrop-filter: blur(20px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+}
+.footer-brand { color: var(--cyan2); }
+
+/* ---- MOBILE NAV ---- */
+.nav-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(4px);
+  z-index: 199;
+}
+.nav-overlay.open { display: block; }
+
+.mobile-sidebar {
+  position: fixed;
+  left: 0; top: 0; bottom: 0;
+  width: 280px;
+  background: var(--bg2);
+  border-right: 1px solid var(--border2);
+  z-index: 200;
+  transform: translateX(-100%);
+  transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+  padding: 20px 16px;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+.mobile-sidebar.open { transform: translateX(0); }
+
+.mobile-sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.close-btn {
+  background: none;
+  border: 1px solid var(--border2);
+  color: var(--text2);
+  width: 32px; height: 32px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* ---- MOBILE STICKY BUTTON ---- */
+.mobile-sticky-btn {
+  display: none;
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+  width: calc(100% - 40px);
+  max-width: 400px;
+}
+/* ============================================================
+   css/components.css
+   Cards · Buttons · Input · Threat Meter · Stats · Feed
+   ============================================================ */
+
+/* ---- GLASS CARD ---- */
+.card {
+  background: var(--glass);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border);
+  border-radius: var(--r2);
+  overflow: hidden;
+  transition: border-color 0.3s;
+  position: relative;
+}
+.card:hover { border-color: var(--border2); }
+
+.card-header {
+  padding: 16px 22px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255,255,255,0.02);
+}
+.card-header-icon {
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+  background: var(--cyan3);
+  border: 1px solid rgba(0,215,255,0.15);
+}
+.card-title {
+  font-family: var(--display);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+.card-subtitle {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 0.05em;
+  margin-left: auto;
+}
+.card-body { padding: 22px; }
+
+/* ---- PAGE HEADER ---- */
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+.page-header-left h2 {
+  font-family: var(--display);
+  font-size: clamp(24px, 3vw, 34px);
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  line-height: 1.1;
+}
+.page-header-left h2 span { color: var(--cyan); }
+.page-header-left p {
+  font-size: 14px;
+  color: var(--text2);
+  margin-top: 6px;
+  max-width: 420px;
+}
+.header-stats { display: flex; gap: 12px; flex-wrap: wrap; }
+.hstat {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 14px 18px;
+  text-align: right;
+  min-width: 100px;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+.hstat:hover { border-color: var(--border2); }
+.hstat::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(0,215,255,0.03) 0%, transparent 60%);
+}
+.hstat-num { font-family: var(--mono); font-size: 22px; font-weight: 700; color: var(--cyan); display: block; }
+.hstat-label { font-size: 11px; color: var(--muted); display: block; margin-top: 2px; }
+
+/* ---- STATS BAR ---- */
+.stats-bar { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; }
+.stat-card {
+  background: var(--glass);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px 20px;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s;
+  cursor: default;
+}
+.stat-card:hover { border-color: var(--border3); transform: translateY(-2px); box-shadow: 0 8px 30px rgba(0,215,255,0.06); }
+.stat-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(0,215,255,0.04) 0%, transparent 50%);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.stat-card:hover::before { opacity: 1; }
+.stat-icon { font-size: 20px; margin-bottom: 10px; }
+.stat-num { font-family: var(--mono); font-size: 28px; font-weight: 700; color: var(--text); line-height: 1; display: block; }
+.stat-label { font-size: 12px; color: var(--muted); margin-top: 5px; display: block; }
+.stat-delta {
+  position: absolute;
+  top: 16px; right: 16px;
+  font-family: var(--mono);
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+.stat-delta.up   { color: var(--safe);   background: var(--safe-bg);   border: 1px solid rgba(0,232,150,0.15); }
+.stat-delta.down { color: var(--danger); background: var(--danger-bg); border: 1px solid rgba(255,61,90,0.15); }
+
+/* ---- BUTTONS ---- */
+.btn {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  transition: all 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+.btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(255,255,255,0);
+  transition: background 0.15s;
+}
+.btn:active::after { background: rgba(255,255,255,0.08); }
+
+.btn-primary {
+  padding: 12px 24px;
+  background: linear-gradient(135deg, var(--cyan), var(--cyan2));
+  color: #000;
+}
+.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(0,215,255,0.3); }
+.btn-primary:active { transform: translateY(0); }
+.btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+
+.btn-secondary {
+  padding: 12px 18px;
+  background: rgba(255,255,255,0.04);
+  color: var(--text2);
+  border: 1px solid var(--border2);
+}
+.btn-secondary:hover { background: rgba(255,255,255,0.07); border-color: var(--border3); color: var(--text); }
+
+.btn-ghost {
+  padding: 10px 14px;
+  background: none;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  font-size: 11px;
+}
+.btn-ghost:hover { color: var(--cyan); border-color: var(--border3); }
+
+/* ---- INPUT CARD ---- */
+.input-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: rgba(255,255,255,0.02);
+  border-bottom: 1px solid var(--border);
+}
+.toolbar-dots { display: flex; gap: 6px; }
+.tdot { width: 10px; height: 10px; border-radius: 50%; }
+.tdot-r { background: #ff5f57; }
+.tdot-y { background: #ffbd2e; }
+.tdot-g { background: #28c840; }
+.toolbar-filename { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-left: 4px; }
+.toolbar-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+.toolbar-tag {
+  font-family: var(--mono);
+  font-size: 9px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+}
+.tag-ready    { background: rgba(0,215,255,0.1); color: var(--cyan2); border: 1px solid rgba(0,215,255,0.2); }
+.tag-scanning { display: none; background: rgba(255,184,0,0.1); color: var(--warn); border: 1px solid rgba(255,184,0,0.2); animation: blink 0.8s step-end infinite; }
+
+.email-textarea {
+  width: 100%;
+  min-height: 200px;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 12.5px;
+  line-height: 1.8;
+  padding: 18px;
+  resize: vertical;
+  outline: none;
+  border-bottom: 1px solid var(--border);
+}
+.email-textarea::placeholder { color: var(--muted); opacity: 0.5; }
+
+.input-footer {
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.char-count { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.input-footer-right { margin-left: auto; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+/* ---- SCAN PROGRESS ---- */
+.scan-progress {
+  display: none;
+  padding: 16px 20px;
+  background: rgba(0,215,255,0.03);
+  border-top: 1px solid var(--border);
+}
+.scan-progress.active { display: block; }
+.scan-steps { display: flex; gap: 0; margin-bottom: 12px; }
+.scan-step {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--muted);
+  padding: 0 8px;
+  position: relative;
+}
+.scan-step:first-child { padding-left: 0; }
+.scan-step::after { content: '→'; position: absolute; right: -2px; color: var(--border2); font-size: 12px; z-index: 1; }
+.scan-step:last-child::after { display: none; }
+.scan-step.done   { color: var(--safe); }
+.scan-step.active { color: var(--cyan); animation: blink 0.8s step-end infinite; }
+
+.scan-bar-track { height: 2px; background: rgba(255,255,255,0.06); border-radius: 1px; overflow: hidden; }
+.scan-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--cyan2), var(--cyan));
+  border-radius: 1px;
+  width: 0%;
+  transition: width 0.3s ease;
+  position: relative;
+}
+.scan-bar-fill::after {
+  content: '';
+  position: absolute;
+  right: 0; top: -2px;
+  width: 20px; height: 6px;
+  background: var(--cyan);
+  filter: blur(6px);
+  border-radius: 50%;
+}
+
+/* ---- SAMPLE CHIPS ---- */
+.samples-row {
+  display: flex;
+  gap: 8px;
+  padding: 12px 18px;
+  background: rgba(0,0,0,0.2);
+  border-top: 1px solid var(--border);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  align-items: center;
+}
+.samples-label { font-family: var(--mono); font-size: 9px; color: var(--muted); flex-shrink: 0; }
+.sample-chip {
+  font-family: var(--mono);
+  font-size: 10px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--border2);
+  color: var(--text2);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+  background: rgba(255,255,255,0.02);
+  flex-shrink: 0;
+}
+.sample-chip:hover        { border-color: var(--cyan);   color: var(--cyan);   background: var(--cyan3); }
+.sample-chip.danger-chip:hover { border-color: var(--danger); color: var(--danger); background: var(--danger-bg); }
+
+/* ---- THREAT METER ---- */
+.threat-meter-wrap {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 22px;
+  flex-wrap: wrap;
+}
+.threat-circle-wrap { position: relative; width: 120px; height: 120px; flex-shrink: 0; }
+.threat-circle-svg  { width: 120px; height: 120px; transform: rotate(-90deg); }
+.threat-track { fill: none; stroke: rgba(255,255,255,0.06); stroke-width: 8; }
+.threat-fill  {
+  fill: none;
+  stroke: var(--safe);
+  stroke-width: 8;
+  stroke-linecap: round;
+  stroke-dasharray: 314;
+  stroke-dashoffset: 314;
+  transition: stroke-dashoffset 1s cubic-bezier(0.4,0,0.2,1), stroke 0.5s ease;
+  filter: drop-shadow(0 0 6px currentColor);
+}
+.threat-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+.threat-score-num  { font-family: var(--mono); font-size: 26px; font-weight: 700; color: var(--safe); line-height: 1; transition: color 0.5s; }
+.threat-score-label{ font-family: var(--mono); font-size: 9px; color: var(--muted); letter-spacing: 0.06em; margin-top: 2px; }
+.threat-details    { flex: 1; min-width: 180px; }
+.threat-level-label{ font-family: var(--display); font-size: 22px; font-weight: 800; letter-spacing: -0.3px; transition: color 0.5s; color: var(--safe); }
+.threat-confidence { font-size: 13px; color: var(--text2); margin-top: 4px; }
+.threat-bars       { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
+.tbar-row          { display: flex; align-items: center; gap: 10px; }
+.tbar-label        { font-size: 11px; color: var(--muted); width: 100px; flex-shrink: 0; }
+.tbar-track        { flex: 1; height: 4px; background: rgba(255,255,255,0.06); border-radius: 2px; overflow: hidden; }
+.tbar-fill         { height: 100%; border-radius: 2px; width: 0%; transition: width 1.2s cubic-bezier(0.4,0,0.2,1); }
+.tbar-val          { font-family: var(--mono); font-size: 10px; color: var(--muted); width: 28px; text-align: right; flex-shrink: 0; }
+
+/* ---- THRESHOLD STRIP ---- */
+.threshold-strip {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 20px;
+  background: rgba(0,0,0,0.2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  flex-wrap: wrap;
+}
+.threshold-label { font-family: var(--mono); font-size: 10px; color: var(--muted); letter-spacing: 0.08em; flex-shrink: 0; }
+.threshold-item  { display: flex; align-items: center; gap: 7px; font-family: var(--mono); font-size: 11px; }
+.threshold-dot   { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.threshold-sep   { color: var(--border2); }
+
+/* ---- ACTIVITY FEED ---- */
+.activity-feed { display: flex; flex-direction: column; gap: 1px; }
+.activity-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.15s;
+  border-radius: 6px;
+}
+.activity-item:hover { background: rgba(255,255,255,0.02); }
+.activity-dot  { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.activity-text { font-size: 12.5px; color: var(--text2); flex: 1; }
+.activity-text strong { color: var(--text); font-weight: 500; }
+.activity-time { font-family: var(--mono); font-size: 10px; color: var(--muted); flex-shrink: 0; }
+/* ============================================================
+   css/results.css
+   Results section: Verdict · Metrics · AI · Indicators ·
+   Timeline · Email Preview · URL Panel · Tips
+   ============================================================ */
+
+/* ---- RESULTS SECTION ---- */
+#results-section { display: none; animation: slideUp 0.4s ease; }
+#results-section.visible { display: flex; flex-direction: column; gap: 24px; }
+
+/* ---- VERDICT CARD ---- */
+.verdict-card {
+  border-radius: var(--r2);
+  border: 1px solid;
+  overflow: hidden;
+  position: relative;
+}
+.verdict-card.safe   { background: var(--safe-bg);   border-color: rgba(0,232,150,0.25); }
+.verdict-card.warn   { background: var(--warn-bg);   border-color: rgba(255,184,0,0.25); }
+.verdict-card.danger { background: var(--danger-bg); border-color: rgba(255,61,90,0.25); }
+
+.verdict-glow {
+  position: absolute;
+  inset: 0;
+  opacity: 0.4;
+  pointer-events: none;
+}
+.safe   .verdict-glow { background: radial-gradient(ellipse at 0% 50%, var(--safe-glow)   0%, transparent 60%); }
+.warn   .verdict-glow { background: radial-gradient(ellipse at 0% 50%, var(--warn-glow)   0%, transparent 60%); }
+.danger .verdict-glow { background: radial-gradient(ellipse at 0% 50%, var(--danger-glow) 0%, transparent 60%); }
+
+.verdict-inner {
+  position: relative;
+  padding: 28px 32px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.verdict-icon {
+  width: 64px; height: 64px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px;
+  flex-shrink: 0;
+  border: 2px solid;
+}
+.safe   .verdict-icon { background: rgba(0,232,150,0.1);  border-color: var(--safe);   box-shadow: 0 0 24px var(--safe-glow); }
+.warn   .verdict-icon { background: rgba(255,184,0,0.1);  border-color: var(--warn);   box-shadow: 0 0 24px var(--warn-glow); }
+.danger .verdict-icon { background: rgba(255,61,90,0.1);  border-color: var(--danger); box-shadow: 0 0 24px var(--danger-glow); }
+
+.verdict-text { flex: 1; }
+.verdict-tag  { font-family: var(--mono); font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; opacity: 0.6; margin-bottom: 6px; }
+.verdict-name { font-family: var(--display); font-size: clamp(26px, 4vw, 36px); font-weight: 800; line-height: 1; letter-spacing: -0.5px; }
+.safe   .verdict-name { color: var(--safe); }
+.warn   .verdict-name { color: var(--warn); }
+.danger .verdict-name { color: var(--danger); }
+.verdict-desc { font-size: 14px; color: var(--text2); margin-top: 8px; }
+.verdict-meta { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 14px; }
+.vmeta { display: flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.vmeta-dot { width: 6px; height: 6px; border-radius: 50%; }
+.safe   .vmeta-dot { background: var(--safe); }
+.warn   .vmeta-dot { background: var(--warn); }
+.danger .vmeta-dot { background: var(--danger); }
+
+.verdict-scores { display: flex; gap: 12px; align-items: center; flex-shrink: 0; }
+.vscore {
+  text-align: center;
+  padding: 16px 20px;
+  background: rgba(0,0,0,0.2);
+  border-radius: var(--r);
+  border: 1px solid rgba(255,255,255,0.06);
+  min-width: 80px;
+}
+.vscore-num   { font-family: var(--mono); font-size: 28px; font-weight: 700; line-height: 1; }
+.vscore-label { font-size: 10px; color: var(--muted); margin-top: 4px; font-family: var(--mono); letter-spacing: 0.04em; }
+
+/* ---- METRICS GRID ---- */
+.metrics-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; }
+.metric-cell {
+  background: rgba(255,255,255,0.02);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  transition: border-color 0.2s;
+}
+.metric-cell:hover { border-color: var(--border2); }
+.metric-label { font-family: var(--mono); font-size: 10px; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 8px; }
+.metric-bar-wrap { height: 4px; background: rgba(255,255,255,0.06); border-radius: 2px; overflow: hidden; margin-bottom: 8px; }
+.metric-bar { height: 100%; border-radius: 2px; width: 0%; transition: width 1.2s cubic-bezier(0.4,0,0.2,1); }
+.metric-val { font-family: var(--mono); font-size: 18px; font-weight: 700; line-height: 1; }
+.metric-sub { font-size: 11px; color: var(--muted); margin-top: 3px; }
+
+/* ---- AI PANEL ---- */
+.ai-panel { background: var(--glass); border: 1px solid var(--border); border-radius: var(--r2); overflow: hidden; }
+.ai-header {
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(124,92,252,0.06);
+  border-bottom: 1px solid rgba(124,92,252,0.12);
+}
+.ai-orb {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--purple), var(--cyan2));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px;
+  position: relative;
+}
+.ai-orb::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 50%;
+  border: 1px solid rgba(124,92,252,0.4);
+  animation: orb-pulse 2s ease-in-out infinite;
+}
+@keyframes orb-pulse {
+  0%, 100% { transform: scale(1); opacity: 0.8; }
+  50%       { transform: scale(1.15); opacity: 0.3; }
+}
+.ai-header-text { font-size: 13px; font-weight: 600; color: var(--text); }
+.ai-header-tag  {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 10px;
+  background: var(--purple2);
+  color: var(--purple);
+  border: 1px solid rgba(124,92,252,0.3);
+  padding: 2px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.04em;
+}
+.ai-body { padding: 20px; }
+.ai-insight {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 10px;
+  animation: fadeSlide 0.4s ease both;
+}
+.ai-insight-icon { width: 30px; height: 30px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+.ai-insight-text { font-size: 13px; color: var(--text2); line-height: 1.6; }
+.ai-insight-text strong { color: var(--text); font-weight: 600; }
+
+/* ---- INDICATORS ---- */
+.indicator-item {
+  display: flex;
+  gap: 14px;
+  padding: 14px 16px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin-bottom: 10px;
+  border-left: 3px solid transparent;
+  animation: fadeSlide 0.35s ease both;
+  transition: background 0.2s;
+}
+.indicator-item:hover { background: rgba(255,255,255,0.04); }
+.indicator-item.high { border-left-color: var(--danger); }
+.indicator-item.med  { border-left-color: var(--warn);   }
+.indicator-item.low  { border-left-color: var(--cyan);   }
+
+.indicator-badge {
+  font-family: var(--mono);
+  font-size: 9px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-weight: 700;
+  flex-shrink: 0;
+  margin-top: 2px;
+  letter-spacing: 0.06em;
+  align-self: flex-start;
+}
+.high .indicator-badge { background: rgba(255,61,90,0.12);  color: var(--danger); border: 1px solid rgba(255,61,90,0.2);  }
+.med  .indicator-badge { background: rgba(255,184,0,0.12);  color: var(--warn);   border: 1px solid rgba(255,184,0,0.2);  }
+.low  .indicator-badge { background: rgba(0,215,255,0.1);   color: var(--cyan2);  border: 1px solid rgba(0,215,255,0.2);  }
+
+.indicator-content { flex: 1; }
+.indicator-name    { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 4px; font-family: var(--display); }
+.indicator-why     { font-size: 12.5px; color: var(--text2); line-height: 1.6; }
+.indicator-pts     { font-family: var(--mono); font-size: 13px; font-weight: 700; flex-shrink: 0; align-self: center; }
+.high .indicator-pts { color: var(--danger); }
+.med  .indicator-pts { color: var(--warn);   }
+.low  .indicator-pts { color: var(--cyan2);  }
+
+/* ---- NO FLAGS STATE ---- */
+.no-flags {
+  text-align: center;
+  padding: 40px 24px;
+  background: rgba(0,232,150,0.03);
+  border: 1px solid rgba(0,232,150,0.1);
+  border-radius: 12px;
+}
+.no-flags-icon { font-size: 40px; margin-bottom: 12px; }
+.no-flags p    { font-size: 14px; color: var(--text2); }
+
+/* ---- THREAT TIMELINE ---- */
+.timeline { display: flex; overflow-x: auto; padding: 4px 0; }
+.tl-stage {
+  flex: 1;
+  min-width: 100px;
+  text-align: center;
+  position: relative;
+  padding: 0 8px;
+  opacity: 0.3;
+  transition: opacity 0.5s;
+}
+.tl-stage.active { opacity: 1; }
+.tl-stage.done   { opacity: 0.7; }
+.tl-stage::after { content: '→'; position: absolute; right: -8px; top: 18px; color: var(--muted); font-size: 14px; z-index: 1; }
+.tl-stage:last-child::after { display: none; }
+.tl-icon {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.04);
+  border: 2px solid var(--border2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+  margin: 0 auto 8px;
+  transition: all 0.3s;
+}
+.tl-stage.active .tl-icon { border-color: var(--danger); box-shadow: 0 0 16px var(--danger-glow); background: var(--danger-bg); }
+.tl-stage.done   .tl-icon { border-color: var(--warn);   background: var(--warn-bg); }
+.tl-name { font-family: var(--mono); font-size: 10px; color: var(--text2); letter-spacing: 0.04em; }
+.tl-sub  { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+/* ---- EMAIL PREVIEW ---- */
+.email-preview { background: rgba(0,0,0,0.3); border-radius: 0 0 var(--r2) var(--r2); overflow: hidden; }
+.ep-toolbar {
+  padding: 10px 16px;
+  background: rgba(255,255,255,0.03);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+}
+.ep-dots { display: flex; gap: 5px; }
+.ep-dot  { width: 8px; height: 8px; border-radius: 50%; }
+.ep-dot-r { background: #ff5f57; }
+.ep-dot-y { background: #ffbd2e; }
+.ep-dot-g { background: #28c840; }
+.ep-from {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.ep-avatar {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  color: #000;
+  flex-shrink: 0;
+  font-family: var(--display);
+}
+.ep-sender-info { flex: 1; }
+.ep-sender-name { font-size: 13px; font-weight: 600; color: var(--text); }
+.ep-sender-addr { font-size: 11px; font-family: var(--mono); }
+.ep-warning-badge {
+  font-family: var(--mono);
+  font-size: 10px;
+  background: var(--danger-bg);
+  color: var(--danger);
+  border: 1px solid rgba(255,61,90,0.3);
+  padding: 3px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.04em;
+  animation: blink 1.5s step-end infinite;
+}
+.ep-body {
+  padding: 16px;
+  font-size: 13px;
+  color: var(--text2);
+  line-height: 1.8;
+  max-height: 200px;
+  overflow-y: auto;
+}
+.ep-body .highlight-danger {
+  background: rgba(255,61,90,0.15);
+  color: var(--danger);
+  border-radius: 3px;
+  padding: 0 3px;
+  border-bottom: 1px solid rgba(255,61,90,0.3);
+}
+.ep-body .highlight-warn {
+  background: rgba(255,184,0,0.1);
+  color: var(--warn);
+  border-radius: 3px;
+  padding: 0 3px;
+}
+
+/* ---- TIPS ---- */
+.tip-item {
+  display: flex;
+  gap: 14px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+.tip-item:last-child { border-bottom: none; }
+.tip-num  { font-family: var(--mono); font-size: 10px; color: var(--cyan2); padding-top: 2px; flex-shrink: 0; min-width: 22px; letter-spacing: 0.04em; }
+.tip-text { font-size: 13px; color: var(--text2); line-height: 1.6; }
+.tip-text strong { color: var(--text); font-weight: 600; }
+/* ============================================================
+   css/responsive.css
+   Breakpoints: 1024px · 768px · 480px · 320px
+   ============================================================ */
+
+@media (max-width: 1024px) {
+  .stats-bar    { grid-template-columns: repeat(2,1fr); }
+  .metrics-grid { grid-template-columns: repeat(2,1fr); }
+  .grid-2       { grid-template-columns: 1fr; }
+  .grid-3       { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 768px) {
+  /* LAYOUT */
+  .layout { grid-template-columns: 1fr; }
+  .sidebar { display: none; }
+
+  /* TOPBAR */
+  .topbar        { padding: 0 16px; }
+  .topbar-center { display: none; }
+  .topbar-stat   { display: none; }
+  .hamburger     { display: flex; }
+
+  /* MAIN */
+  .main { padding: 20px 16px 100px; gap: 20px; }
+
+  /* PAGE HEADER */
+  .page-header  { flex-direction: column; }
+  .header-stats { width: 100%; }
+  .hstat        { flex: 1; text-align: center; }
+
+  /* STATS */
+  .stats-bar { grid-template-columns: repeat(2,1fr); gap: 10px; }
+  .stat-num  { font-size: 22px; }
+
+  /* RESULTS */
+  .metrics-grid  { grid-template-columns: 1fr 1fr; }
+  .verdict-inner { padding: 20px; }
+  .verdict-scores{ width: 100%; justify-content: flex-start; }
+
+  /* METER */
+  .threat-meter-wrap { flex-direction: column; align-items: flex-start; }
+
+  /* GRIDS */
+  .grid-2 { grid-template-columns: 1fr; }
+  .grid-3 { grid-template-columns: 1fr; }
+
+  /* STICKY MOBILE BUTTON */
+  .mobile-sticky-btn { display: block; }
+}
+
+@media (max-width: 480px) {
+  .stats-bar    { grid-template-columns: 1fr 1fr; }
+  .metrics-grid { grid-template-columns: 1fr; }
+  .brand-badge  { display: none; }
+  .scan-steps   { display: none; }
+  .verdict-scores { flex-wrap: wrap; }
+  .vscore { flex: 1; min-width: 70px; }
+  .timeline { flex-direction: column; gap: 12px; }
+  .tl-stage::after { display: none; }
+  .tl-stage { display: flex; align-items: center; gap: 12px; text-align: left; }
+  .tl-icon  { margin: 0; flex-shrink: 0; }
+}
+
+@media (max-width: 320px) {
+  .main    { padding: 14px 12px 90px; }
+  .topbar  { padding: 0 12px; }
+  .brand-name { font-size: 15px; }
+  .stats-bar  { grid-template-columns: 1fr; }
+  .verdict-inner { padding: 16px; }
+}
+</style>
+</head>
+<body>
+
+<!-- BACKGROUND -->
+<div class="bg-canvas">
+  <div class="bg-grid"></div>
+  <div class="bg-orb bg-orb-1"></div>
+  <div class="bg-orb bg-orb-2"></div>
+  <div class="bg-orb bg-orb-3"></div>
+  <div class="radar-ring"></div>
+  <div class="radar-ring"></div>
+  <div class="radar-ring"></div>
+</div>
+
+<!-- MOBILE NAV OVERLAY -->
+<div class="nav-overlay" id="navOverlay" onclick="closeNav()"></div>
+<nav class="mobile-sidebar" id="mobileSidebar">
+  <div class="mobile-sidebar-header">
+    <div class="brand">
+      <div class="brand-icon">🛡</div>
+      <span class="brand-name">Phish<em>Guard</em></span>
+    </div>
+    <button class="close-btn" onclick="closeNav()">✕</button>
+  </div>
+  <span class="nav-section-label">Navigation</span>
+  <a class="nav-item active" data-page="analyzer" onclick="navigateTo('analyzer'); closeNav();">
+    <div class="nav-item-icon">🔍</div>Email Analyzer
+  </a>
+  <a class="nav-item" data-page="dashboard" onclick="navigateTo('dashboard'); closeNav();">
+    <div class="nav-item-icon">📊</div>Dashboard
+  </a>
+  <a class="nav-item" data-page="threatfeed" onclick="navigateTo('threatfeed'); closeNav();">
+    <div class="nav-item-icon">📡</div>Threat Feed
+    <span class="nav-item-badge">3</span>
+  </a>
+  <span class="nav-section-label">Tools</span>
+  <a class="nav-item" data-page="urlanalyzer" onclick="navigateTo('urlanalyzer'); closeNav();">
+    <div class="nav-item-icon">🔗</div>URL Analyzer
+  </a>
+  <a class="nav-item" data-page="history" onclick="navigateTo('history'); closeNav();">
+    <div class="nav-item-icon">📋</div>Scan History
+  </a>
+  <a class="nav-item" data-page="settings" onclick="navigateTo('settings'); closeNav();">
+    <div class="nav-item-icon">⚙️</div>Settings
+  </a>
+</nav>
+
+<div class="layout">
+
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <a class="brand" onclick="navigateTo('analyzer')" style="cursor:pointer;">
+      <div class="brand-icon">🛡</div>
+      <span class="brand-name">Phish<em>Guard</em></span>
+      <span class="brand-badge">v2.0</span>
+    </a>
+    <div class="topbar-center">
+      <div class="status-pill">
+        <div class="status-dot"></div>
+        Detection Engine Online &nbsp;·&nbsp; Rule-based + Heuristic
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <div class="topbar-stat">Engine: <span class="val">8 rules active</span></div>
+      <div class="topbar-stat">Accuracy: <span class="val">94.2%</span></div>
+      <button class="hamburger" onclick="openNav()">☰</button>
+    </div>
+  </header>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <span class="nav-section-label">Main</span>
+    <a class="nav-item active" data-page="analyzer" onclick="navigateTo('analyzer')">
+      <div class="nav-item-icon">🔍</div>Email Analyzer
+    </a>
+    <a class="nav-item" data-page="dashboard" onclick="navigateTo('dashboard')">
+      <div class="nav-item-icon">📊</div>Dashboard
+    </a>
+    <a class="nav-item" data-page="threatfeed" onclick="navigateTo('threatfeed')">
+      <div class="nav-item-icon">📡</div>Threat Feed
+      <span class="nav-item-badge">3</span>
+    </a>
+    <span class="nav-section-label">Analysis Tools</span>
+    <a class="nav-item" data-page="urlanalyzer" onclick="navigateTo('urlanalyzer')">
+      <div class="nav-item-icon">🔗</div>URL Analyzer
+    </a>
+    <a class="nav-item" data-page="attachment" onclick="navigateTo('attachment')">
+      <div class="nav-item-icon">📎</div>Attachment Scanner
+    </a>
+    <a class="nav-item" data-page="header" onclick="navigateTo('header')">
+      <div class="nav-item-icon">🧬</div>Header Inspector
+    </a>
+    <span class="nav-section-label">Reports</span>
+    <a class="nav-item" data-page="history" onclick="navigateTo('history')">
+      <div class="nav-item-icon">📋</div>Scan History
+    </a>
+    <a class="nav-item" data-page="analytics" onclick="navigateTo('analytics')">
+      <div class="nav-item-icon">📈</div>Analytics
+    </a>
+    <a class="nav-item" data-page="settings" onclick="navigateTo('settings')">
+      <div class="nav-item-icon">⚙️</div>Settings
+    </a>
+    <div class="sidebar-footer">
+      <p class="sidebar-footer-text">
+        CSC 320 Laboratory<br>
+        <span>Software Engineering Project</span><br>
+        Rule-based detection engine
+      </p>
+    </div>
+  </aside>
+
+  <!-- ═══════════════════════════════════════════
+       PAGES CONTAINER
+       ═══════════════════════════════════════════ -->
+  <main class="main" id="mainContent">
+
+    <!-- ─── PAGE: EMAIL ANALYZER ─── -->
+    <div class="page" id="page-analyzer">
+
+      <div class="page-header">
+        <div class="page-header-left">
+          <h2>Email <span>Threat</span> Analyzer</h2>
+          <p>Paste any suspicious email to detect phishing attempts, social engineering tactics, and credential theft vectors.</p>
+        </div>
+        <div class="header-stats">
+          <div class="hstat">
+            <span class="hstat-num" id="scanCount">0</span>
+            <span class="hstat-label">Scans today</span>
+          </div>
+          <div class="hstat">
+            <span class="hstat-num" id="threatCount">0</span>
+            <span class="hstat-label">Threats found</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="stats-bar">
+        <div class="stat-card">
+          <div class="stat-icon">🎯</div>
+          <span class="stat-num">94.2%</span>
+          <span class="stat-label">Detection Accuracy</span>
+          <span class="stat-delta up">↑ 2.1%</span>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">⚡</div>
+          <span class="stat-num">8</span>
+          <span class="stat-label">Active Rule Sets</span>
+          <span class="stat-delta up">Updated</span>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🚨</div>
+          <span class="stat-num">3</span>
+          <span class="stat-label">Live Threat Alerts</span>
+          <span class="stat-delta down">Critical</span>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🧠</div>
+          <span class="stat-num">47</span>
+          <span class="stat-label">Pattern Signatures</span>
+          <span class="stat-delta up">Active</span>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <!-- INPUT CARD -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-header-icon">📧</div>
+            <div class="card-title">Email Input Console</div>
+            <div class="card-subtitle" id="engineStatus">// engine ready</div>
+          </div>
+          <div class="input-toolbar">
+            <div class="toolbar-dots">
+              <div class="tdot tdot-r"></div>
+              <div class="tdot tdot-y"></div>
+              <div class="tdot tdot-g"></div>
+            </div>
+            <span class="toolbar-filename">email-input.txt — UTF-8</span>
+            <div class="toolbar-right">
+              <span class="toolbar-tag tag-ready" id="tagReady">READY</span>
+              <span class="toolbar-tag tag-scanning" id="tagScanning">SCANNING</span>
+            </div>
+          </div>
+          <textarea class="email-textarea" id="emailInput"
+            placeholder="Paste the full email content here — headers, subject, body...&#10;&#10;Example:&#10;From: support@paypa1-secure.com&#10;Subject: URGENT: Account suspended!&#10;&#10;Dear Customer, your account will be terminated within 24 hours.&#10;Click here to verify your password immediately..."
+            oninput="handleInput()" spellcheck="false"></textarea>
+          <div class="input-footer">
+            <span class="char-count" id="charCount">0 chars</span>
+            <div class="toolbar-tag tag-ready" style="font-size:9px;opacity:0.6;">LIVE ANALYSIS</div>
+            <div class="input-footer-right">
+              <button class="btn btn-ghost" onclick="clearAll()">✕ Clear</button>
+              <button class="btn btn-primary" id="analyzeBtn" onclick="analyze()">
+                <span id="btnText">▶ Analyze</span>
+              </button>
+            </div>
+          </div>
+          <div class="scan-progress" id="scanProgress">
+            <div class="scan-steps">
+              <div class="scan-step" id="step1">① Parse</div>
+              <div class="scan-step" id="step2">② Tokenize</div>
+              <div class="scan-step" id="step3">③ Pattern Match</div>
+              <div class="scan-step" id="step4">④ Score</div>
+              <div class="scan-step" id="step5">⑤ Verdict</div>
+            </div>
+            <div class="scan-bar-track">
+              <div class="scan-bar-fill" id="scanBarFill"></div>
+            </div>
+          </div>
+          <div class="samples-row">
+            <span class="samples-label">SAMPLES:</span>
+            <span class="sample-chip danger-chip" onclick="loadSample('phishing')">🚨 Phishing</span>
+            <span class="sample-chip danger-chip" onclick="loadSample('credential')">🔐 Credential Theft</span>
+            <span class="sample-chip danger-chip" onclick="loadSample('lottery')">💰 Lottery Scam</span>
+            <span class="sample-chip" onclick="loadSample('legit')">✓ Legit Email</span>
+          </div>
+        </div>
+
+        <!-- LIVE THREAT METER -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-header-icon">📡</div>
+            <div class="card-title">Live Threat Meter</div>
+            <div class="card-subtitle" id="meterStatus">// awaiting input</div>
+          </div>
+          <div class="threat-meter-wrap">
+            <div class="threat-circle-wrap">
+              <svg class="threat-circle-svg" viewBox="0 0 120 120">
+                <circle class="threat-track" cx="60" cy="60" r="50"/>
+                <circle class="threat-fill" id="threatFill" cx="60" cy="60" r="50"/>
+              </svg>
+              <div class="threat-center">
+                <span class="threat-score-num" id="liveScore">0</span>
+                <span class="threat-score-label">RISK SCORE</span>
+              </div>
+            </div>
+            <div class="threat-details">
+              <div class="threat-level-label" id="liveThreatLabel">NO THREAT</div>
+              <div class="threat-confidence">Confidence: <span id="liveConfidence" style="color:var(--text)">—</span></div>
+              <div class="threat-bars">
+                <div class="tbar-row"><span class="tbar-label">Urgency Tactics</span><div class="tbar-track"><div class="tbar-fill" id="tbar1" style="background:var(--danger)"></div></div><span class="tbar-val" id="tbarv1">0%</span></div>
+                <div class="tbar-row"><span class="tbar-label">Credential Risk</span><div class="tbar-track"><div class="tbar-fill" id="tbar2" style="background:var(--danger)"></div></div><span class="tbar-val" id="tbarv2">0%</span></div>
+                <div class="tbar-row"><span class="tbar-label">URL Suspicion</span><div class="tbar-track"><div class="tbar-fill" id="tbar3" style="background:var(--warn)"></div></div><span class="tbar-val" id="tbarv3">0%</span></div>
+                <div class="tbar-row"><span class="tbar-label">Spoofing Risk</span><div class="tbar-track"><div class="tbar-fill" id="tbar4" style="background:var(--warn)"></div></div><span class="tbar-val" id="tbarv4">0%</span></div>
+                <div class="tbar-row"><span class="tbar-label">Social Engineering</span><div class="tbar-track"><div class="tbar-fill" id="tbar5" style="background:var(--cyan)"></div></div><span class="tbar-val" id="tbarv5">0%</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="threshold-strip">
+        <span class="threshold-label">RISK THRESHOLDS:</span>
+        <div class="threshold-item"><div class="threshold-dot" style="background:var(--safe);box-shadow:0 0 5px var(--safe)"></div><span style="color:var(--safe)">Legitimate</span><span style="color:var(--muted)">0–4 pts</span></div>
+        <span class="threshold-sep">|</span>
+        <div class="threshold-item"><div class="threshold-dot" style="background:var(--warn);box-shadow:0 0 5px var(--warn)"></div><span style="color:var(--warn)">Suspicious</span><span style="color:var(--muted)">5–9 pts</span></div>
+        <span class="threshold-sep">|</span>
+        <div class="threshold-item"><div class="threshold-dot" style="background:var(--danger);box-shadow:0 0 5px var(--danger)"></div><span style="color:var(--danger)">Phishing</span><span style="color:var(--muted)">10+ pts</span></div>
+        <span class="threshold-sep">|</span>
+        <span style="font-family:var(--mono);font-size:10px;color:var(--muted)">Max: 25 pts · 47 signatures · 8 rule categories</span>
+      </div>
+
+      <!-- ACTIVITY FEED -->
+      <div class="card" id="activitySection">
+        <div class="card-header">
+          <div class="card-header-icon">⚡</div>
+          <div class="card-title">Live Activity Feed</div>
+          <div class="card-subtitle">// real-time monitoring</div>
+        </div>
+        <div class="card-body">
+          <div class="activity-feed" id="activityFeed">
+            <div class="activity-item"><div class="activity-dot" style="background:var(--safe)"></div><div class="activity-text">Detection engine <strong>initialized</strong> — all 8 rule sets loaded</div><div class="activity-time">just now</div></div>
+            <div class="activity-item"><div class="activity-dot" style="background:var(--cyan)"></div><div class="activity-text">Pattern database <strong>updated</strong> — 47 signatures active</div><div class="activity-time">1m ago</div></div>
+            <div class="activity-item"><div class="activity-dot" style="background:var(--warn)"></div><div class="activity-text"><strong>Suspicious URL pattern</strong> detected in global feed — paypa1.com variant</div><div class="activity-time">4m ago</div></div>
+            <div class="activity-item"><div class="activity-dot" style="background:var(--danger)"></div><div class="activity-text"><strong>High-severity phishing campaign</strong> flagged — credential harvesting vector</div><div class="activity-time">12m ago</div></div>
+            <div class="activity-item"><div class="activity-dot" style="background:var(--safe)"></div><div class="activity-text">Rule engine <strong>self-test passed</strong> — 94.2% accuracy benchmark confirmed</div><div class="activity-time">1h ago</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RESULTS SECTION -->
+      <div id="results-section">
+        <div class="verdict-card" id="verdictCard">
+          <div class="verdict-glow"></div>
+          <div class="verdict-inner">
+            <div class="verdict-icon" id="verdictIcon"></div>
+            <div class="verdict-text">
+              <div class="verdict-tag">DETECTION VERDICT</div>
+              <div class="verdict-name" id="verdictName"></div>
+              <div class="verdict-desc" id="verdictDesc"></div>
+              <div class="verdict-meta" id="verdictMeta"></div>
+            </div>
+            <div class="verdict-scores" id="verdictScores"></div>
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-header"><div class="card-header-icon">📊</div><div class="card-title">Advanced Risk Metrics</div><div class="card-subtitle" id="metricsTag">// computed</div></div>
+            <div class="card-body"><div class="metrics-grid" id="metricsGrid"></div></div>
+          </div>
+          <div class="ai-panel">
+            <div class="ai-header"><div class="ai-orb">🧠</div><div class="ai-header-text">Threat Intelligence Engine</div><span class="ai-header-tag">AI INSIGHTS</span></div>
+            <div class="ai-body" id="aiBody"></div>
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-header"><div class="card-header-icon">📬</div><div class="card-title">Email Preview Simulator</div><div class="card-subtitle">// rendered view</div></div>
+            <div class="card-body" style="padding:0;"><div class="email-preview" id="emailPreview"></div></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div class="card-header-icon">⏱</div><div class="card-title">Phishing Attack Timeline</div><div class="card-subtitle">// attack vector stages</div></div>
+            <div class="card-body">
+              <div class="timeline">
+                <div class="tl-stage" id="tls1"><div class="tl-icon">📨</div><div class="tl-name">DELIVERY</div><div class="tl-sub">Email sent</div></div>
+                <div class="tl-stage" id="tls2"><div class="tl-icon">🪝</div><div class="tl-name">HOOK</div><div class="tl-sub">Social eng.</div></div>
+                <div class="tl-stage" id="tls3"><div class="tl-icon">🖱</div><div class="tl-name">CLICK</div><div class="tl-sub">User clicks</div></div>
+                <div class="tl-stage" id="tls4"><div class="tl-icon">🔐</div><div class="tl-name">HARVEST</div><div class="tl-sub">Credentials</div></div>
+                <div class="tl-stage" id="tls5"><div class="tl-icon">💥</div><div class="tl-name">COMPROMISE</div><div class="tl-sub">Account taken</div></div>
+              </div>
+              <div style="margin-top:16px;" id="timelineExplain"></div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-header-icon">🚩</div><div class="card-title">Detected Threat Indicators</div><span class="card-subtitle" id="indicatorCount">// 0 flags</span></div>
+          <div class="card-body"><div id="indicatorsList"></div></div>
+        </div>
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-header"><div class="card-header-icon">🔗</div><div class="card-title">URL Risk Analysis</div><div class="card-subtitle">// link inspector</div></div>
+            <div class="card-body" id="urlPanel"></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div class="card-header-icon">🛡</div><div class="card-title">Cybersecurity Guidance</div><div class="card-subtitle">// best practices</div></div>
+            <div class="card-body" id="tipsList"></div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /page-analyzer -->
+
+
+    <!-- ─── PAGE: DASHBOARD ─── -->
+    <div class="page" id="page-dashboard" style="display:none;">
+      <div class="page-header">
+        <div class="page-header-left">
+          <h2>Security <span>Dashboard</span></h2>
+          <p>Overview of detection activity, threat trends, and engine performance metrics.</p>
+        </div>
+      </div>
+      <div class="stats-bar">
+        <div class="stat-card"><div class="stat-icon">🔍</div><span class="stat-num" id="db-totalScans">0</span><span class="stat-label">Total Scans</span><span class="stat-delta up">Session</span></div>
+        <div class="stat-card"><div class="stat-icon">🚨</div><span class="stat-num" id="db-threats">0</span><span class="stat-label">Threats Detected</span><span class="stat-delta down">Flagged</span></div>
+        <div class="stat-card"><div class="stat-icon">✅</div><span class="stat-num" id="db-clean">0</span><span class="stat-label">Clean Emails</span><span class="stat-delta up">Safe</span></div>
+        <div class="stat-card"><div class="stat-icon">🎯</div><span class="stat-num">94.2%</span><span class="stat-label">Accuracy Rate</span><span class="stat-delta up">↑ 2.1%</span></div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header"><div class="card-header-icon">📊</div><div class="card-title">Threat Breakdown</div><div class="card-subtitle">// by category</div></div>
+          <div class="card-body" id="db-breakdown">
+            <div class="db-empty-state"><div class="db-empty-icon">📭</div><p>No scans yet. Run your first analysis to see threat category breakdown.</p><button class="btn btn-primary" style="margin-top:16px;" onclick="navigateTo('analyzer')">▶ Go to Analyzer</button></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-header-icon">⚡</div><div class="card-title">Recent Activity</div><div class="card-subtitle">// last 10 scans</div></div>
+          <div class="card-body">
+            <div class="activity-feed" id="db-feed">
+              <div class="activity-item"><div class="activity-dot" style="background:var(--safe)"></div><div class="activity-text">Engine <strong>online</strong> — awaiting scans</div><div class="activity-time">now</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-header-icon">🧬</div><div class="card-title">Detection Engine Status</div><div class="card-subtitle">// 8 rule categories</div></div>
+        <div class="card-body">
+          <div class="metrics-grid">
+            <div class="metric-cell"><div class="metric-label">URGENCY RULES</div><div class="metric-bar-wrap"><div class="metric-bar" style="background:var(--danger);width:100%"></div></div><div class="metric-val" style="color:var(--safe)">Active</div><div class="metric-sub">7 patterns loaded</div></div>
+            <div class="metric-cell"><div class="metric-label">CREDENTIAL RULES</div><div class="metric-bar-wrap"><div class="metric-bar" style="background:var(--danger);width:100%"></div></div><div class="metric-val" style="color:var(--safe)">Active</div><div class="metric-sub">5 patterns loaded</div></div>
+            <div class="metric-cell"><div class="metric-label">URL SPOOFING</div><div class="metric-bar-wrap"><div class="metric-bar" style="background:var(--warn);width:100%"></div></div><div class="metric-val" style="color:var(--safe)">Active</div><div class="metric-sub">9 patterns loaded</div></div>
+            <div class="metric-cell"><div class="metric-label">GREETING ANALYSIS</div><div class="metric-bar-wrap"><div class="metric-bar" style="background:var(--cyan);width:100%"></div></div><div class="metric-val" style="color:var(--safe)">Active</div><div class="metric-sub">4 patterns loaded</div></div>
+            <div class="metric-cell"><div class="metric-label">LURE DETECTION</div><div class="metric-bar-wrap"><div class="metric-bar" style="background:var(--warn);width:100%"></div></div><div class="metric-val" style="color:var(--safe)">Active</div><div class="metric-sub">5 patterns loaded</div></div>
+            <div class="metric-cell"><div class="metric-label">ATTACHMENT SCAN</div><div class="metric-bar-wrap"><div class="metric-bar" style="background:var(--warn);width:100%"></div></div><div class="metric-val" style="color:var(--safe)">Active</div><div class="metric-sub">5 patterns loaded</div></div>
+          </div>
+        </div>
+      </div>
+    </div><!-- /page-dashboard -->
+
+
+    <!-- ─── PAGE: THREAT FEED ─── -->
+    <div class="page" id="page-threatfeed" style="display:none;">
+      <div class="page-header">
+        <div class="page-header-left">
+          <h2>Live <span>Threat Feed</span></h2>
+          <p>Simulated global phishing campaign intelligence and real-time threat indicators.</p>
+        </div>
+        <span class="nav-item-badge" style="font-size:12px;padding:6px 14px;align-self:center;">3 ACTIVE ALERTS</span>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-header-icon">🚨</div><div class="card-title">Active Threat Alerts</div><div class="card-subtitle">// live intelligence</div></div>
+        <div class="card-body">
+          <div class="indicator-item high" style="margin-bottom:12px;">
+            <div class="indicator-badge">CRITICAL</div>
+            <div class="indicator-content">
+              <div class="indicator-name">PayPal Credential Harvest Campaign</div>
+              <div class="indicator-why">Mass phishing campaign impersonating PayPal detected. Attackers using paypa1-secure.com and paypal-login-verify.xyz domains. 2,400+ targets identified globally.</div>
+              <div style="margin-top:6px;font-family:var(--mono);font-size:10px;color:var(--muted);">Detected: 2 hours ago · IOC: paypa1-secure.com, paypal-login-verify.xyz</div>
+            </div>
+            <div class="indicator-pts" style="color:var(--danger)">HIGH</div>
+          </div>
+          <div class="indicator-item high" style="margin-bottom:12px;">
+            <div class="indicator-badge">CRITICAL</div>
+            <div class="indicator-content">
+              <div class="indicator-name">Amazon Account Suspension Scam</div>
+              <div class="indicator-why">Credential phishing campaign targeting Amazon users. Emails claim account suspension and request credit card re-verification via malicious link.</div>
+              <div style="margin-top:6px;font-family:var(--mono);font-size:10px;color:var(--muted);">Detected: 5 hours ago · IOC: amazon-account-verify.net</div>
+            </div>
+            <div class="indicator-pts" style="color:var(--danger)">HIGH</div>
+          </div>
+          <div class="indicator-item med" style="margin-bottom:0;">
+            <div class="indicator-badge">MEDIUM</div>
+            <div class="indicator-content">
+              <div class="indicator-name">Lottery / Prize Scam Wave</div>
+              <div class="indicator-why">New batch of lottery scam emails circulating. Emails promise large cash prizes and request .exe attachment downloads or bank details to "claim" winnings.</div>
+              <div style="margin-top:6px;font-family:var(--mono);font-size:10px;color:var(--muted);">Detected: 1 day ago · Malware: invoice.exe dropper</div>
+            </div>
+            <div class="indicator-pts" style="color:var(--warn)">MED</div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-header-icon">🌐</div><div class="card-title">Known Malicious Domains</div><div class="card-subtitle">// blocklist preview</div></div>
+        <div class="card-body">
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;">
+            <div style="padding:10px 14px;background:rgba(255,61,90,0.06);border:1px solid rgba(255,61,90,0.2);border-radius:10px;font-family:var(--mono);font-size:12px;color:var(--danger);">paypa1-secure.com <span style="color:var(--muted);font-size:10px;display:block;margin-top:2px;">Typosquat · PayPal</span></div>
+            <div style="padding:10px 14px;background:rgba(255,61,90,0.06);border:1px solid rgba(255,61,90,0.2);border-radius:10px;font-family:var(--mono);font-size:12px;color:var(--danger);">amazon-account-verify.net <span style="color:var(--muted);font-size:10px;display:block;margin-top:2px;">Credential harvest · Amazon</span></div>
+            <div style="padding:10px 14px;background:rgba(255,61,90,0.06);border:1px solid rgba(255,61,90,0.2);border-radius:10px;font-family:var(--mono);font-size:12px;color:var(--danger);">login-secure-paypal.xyz <span style="color:var(--muted);font-size:10px;display:block;margin-top:2px;">Fake login page · PayPal</span></div>
+            <div style="padding:10px 14px;background:rgba(255,184,0,0.06);border:1px solid rgba(255,184,0,0.2);border-radius:10px;font-family:var(--mono);font-size:12px;color:var(--warn);">support@noreply.tk <span style="color:var(--muted);font-size:10px;display:block;margin-top:2px;">Spoofed sender · Generic</span></div>
+            <div style="padding:10px 14px;background:rgba(255,184,0,0.06);border:1px solid rgba(255,184,0,0.2);border-radius:10px;font-family:var(--mono);font-size:12px;color:var(--warn);">bit.ly/amzn-update <span style="color:var(--muted);font-size:10px;display:block;margin-top:2px;">URL shortener · Redirect</span></div>
+            <div style="padding:10px 14px;background:rgba(255,184,0,0.06);border:1px solid rgba(255,184,0,0.2);border-radius:10px;font-family:var(--mono);font-size:12px;color:var(--warn);">g00gle-account-verify.com <span style="color:var(--muted);font-size:10px;display:block;margin-top:2px;">Typosquat · Google</span></div>
+          </div>
+        </div>
+      </div>
+    </div><!-- /page-threatfeed -->
+
+
+    <!-- ─── PAGE: URL ANALYZER ─── -->
+    <div class="page" id="page-urlanalyzer" style="display:none;">
+      <div class="page-header">
+        <div class="page-header-left">
+          <h2>URL <span>Risk Analyzer</span></h2>
+          <p>Paste a URL or domain to check it against known phishing patterns and suspicious indicators.</p>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-header-icon">🔗</div><div class="card-title">URL Inspector</div><div class="card-subtitle">// paste any link</div></div>
+        <div class="card-body">
+          <div style="display:flex;gap:12px;flex-wrap:wrap;">
+            <input id="urlInput" type="text" placeholder="https://example.com or paste any suspicious URL..."
+              style="flex:1;min-width:200px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text);font-family:var(--mono);font-size:13px;padding:14px 16px;outline:none;transition:border-color 0.2s;"
+              onfocus="this.style.borderColor='var(--cyan2)'" onblur="this.style.borderColor='var(--border2)'"
+              oninput="liveURLCheck(this.value)">
+            <button class="btn btn-primary" onclick="analyzeURL()">🔍 &nbsp;Analyze URL</button>
+          </div>
+          <div id="urlResult" style="margin-top:20px;"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-header-icon">⚠️</div><div class="card-title">URL Red Flags to Watch For</div><div class="card-subtitle">// education</div></div>
+        <div class="card-body">
+          <div class="metrics-grid">
+            <div class="metric-cell"><div class="metric-label">TYPOSQUATTING</div><div class="metric-val" style="font-size:14px;color:var(--danger)">paypa1.com</div><div class="metric-sub">Numbers replacing letters in brand names</div></div>
+            <div class="metric-cell"><div class="metric-label">SUBDOMAIN TRICK</div><div class="metric-val" style="font-size:14px;color:var(--danger)">paypal.evil.com</div><div class="metric-sub">Real brand name used as a subdomain</div></div>
+            <div class="metric-cell"><div class="metric-label">SUSPICIOUS TLD</div><div class="metric-val" style="font-size:14px;color:var(--warn)">bank.xyz / .tk</div><div class="metric-sub">Free or unusual top-level domains</div></div>
+            <div class="metric-cell"><div class="metric-label">URL SHORTENERS</div><div class="metric-val" style="font-size:14px;color:var(--warn)">bit.ly/x1k2</div><div class="metric-sub">Hides real destination URL</div></div>
+            <div class="metric-cell"><div class="metric-label">HTTP (NO S)</div><div class="metric-val" style="font-size:14px;color:var(--warn)">http://</div><div class="metric-sub">No TLS — unencrypted connection</div></div>
+            <div class="metric-cell"><div class="metric-label">KEYWORD STUFFING</div><div class="metric-val" style="font-size:14px;color:var(--cyan)">secure-login-verify</div><div class="metric-sub">Trustworthy words in path/domain</div></div>
+          </div>
+        </div>
+      </div>
+    </div><!-- /page-urlanalyzer -->
+
+
+    <!-- ─── PAGE: ATTACHMENT SCANNER ─── -->
+    <div class="page" id="page-attachment" style="display:none;">
+      <div class="page-header">
+        <div class="page-header-left">
+          <h2>Attachment <span>Scanner</span></h2>
+          <p>Identify dangerous file types and malware delivery patterns in email attachments.</p>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-header-icon">📎</div><div class="card-title">File Type Risk Reference</div><div class="card-subtitle">// threat matrix</div></div>
+        <div class="card-body">
+          <div class="metrics-grid">
+            <div class="metric-cell"><div class="metric-label">EXECUTABLE</div><div class="metric-bar-wrap"><div class="metric-bar" style="background:var(--danger);width:100%"></div></div><div class="metric-val" style="color:var(--danger)">.exe .bat .cmd</div><div class="metric-sub">Direct malware execution — NEVER open</div></div>
+            <div class="metric-cell"><div class="metric-label">OFFICE MACROS</div><div class="metric-bar-wrap"><div class="metric-bar" style="background:var(--danger);width:90%"></div></div><div class="metric-val" style="color:var(--danger)">.doc .xls .xlsm</div><div class="metric-sub">Macro-enabled documents — high risk</div></div>
+            <div class="metric-cell"><div class="metric-label">ARCHIVES</div><div class="metric-bar-wrap"><div class="metric-bar" style="background:var(--warn);width:70%"></div></div><div class="metric-val" style="color:var(--warn)">.zip .rar .7z</div><div class="metric-sub">May contain hidden malicious files</div></div>
+            <div class="metric-cell"><div class="metric-label">SCRIPTS</div><div class="metric-bar-wrap"><div class="metric-bar" style="background:var(--warn);width:80%"></div></div><div class="metric-val" style="color:var(--warn)">.js .vbs .ps1</div><div class="metric-sub">Script files can execute malware</div></div>
+            <div class="metric-cell"><div class="metric-label">PDF FILES</div><div class="metric-bar-wrap"><div class="metric-bar" style="background:var(--cyan);width:40%"></div></div><div class="metric-val" style="color:var(--cyan)">.pdf</div><div class="metric-sub">Can embed malicious JavaScript/links</div></div>
+            <div class="metric-cell"><div class="metric-label">IMAGES</div><div class="metric-bar-wrap"><div class="metric-bar" style="background:var(--safe);width:15%"></div></div><div class="metric-val" style="color:var(--safe)">.jpg .png .gif</div><div class="metric-sub">Generally safe, verify source</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-header-icon">💡</div><div class="card-title">Safe Attachment Practices</div></div>
+        <div class="card-body">
+          <div id="attachTips"></div>
+        </div>
+      </div>
+    </div><!-- /page-attachment -->
+
+
+    <!-- ─── PAGE: HEADER INSPECTOR ─── -->
+    <div class="page" id="page-header" style="display:none;">
+      <div class="page-header">
+        <div class="page-header-left">
+          <h2>Email Header <span>Inspector</span></h2>
+          <p>Analyse email headers to detect SPF/DKIM failures, sender spoofing, and routing anomalies.</p>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-header-icon">🧬</div><div class="card-title">Paste Email Headers</div><div class="card-subtitle">// raw header analysis</div></div>
+        <div class="card-body">
+          <textarea id="headerInput" style="width:100%;min-height:160px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text);font-family:var(--mono);font-size:12px;padding:16px;outline:none;resize:vertical;line-height:1.7;" placeholder="Paste raw email headers here...&#10;&#10;Received: from mail.example.com...&#10;From: support@company.com&#10;DKIM-Signature: v=1; a=rsa-sha256...&#10;SPF: pass"></textarea>
+          <div style="margin-top:12px;display:flex;gap:10px;">
+            <button class="btn btn-primary" onclick="analyzeHeaders()">🧬 &nbsp;Inspect Headers</button>
+            <button class="btn btn-ghost" onclick="document.getElementById('headerInput').value=''">✕ Clear</button>
+          </div>
+          <div id="headerResult" style="margin-top:20px;"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-header-icon">📘</div><div class="card-title">Header Authentication Explained</div></div>
+        <div class="card-body">
+          <div class="metrics-grid">
+            <div class="metric-cell"><div class="metric-label">SPF CHECK</div><div class="metric-val" style="font-size:14px;color:var(--safe)">PASS / FAIL</div><div class="metric-sub">Verifies email was sent from an authorised IP address for the domain</div></div>
+            <div class="metric-cell"><div class="metric-label">DKIM SIGNATURE</div><div class="metric-val" style="font-size:14px;color:var(--safe)">VALID / INVALID</div><div class="metric-sub">Cryptographic signature confirms the email body was not tampered with</div></div>
+            <div class="metric-cell"><div class="metric-label">DMARC POLICY</div><div class="metric-val" style="font-size:14px;color:var(--cyan)">ALIGNED</div><div class="metric-sub">Policy that specifies what to do when SPF/DKIM checks fail</div></div>
+          </div>
+        </div>
+      </div>
+    </div><!-- /page-header -->
+
+
+    <!-- ─── PAGE: SCAN HISTORY ─── -->
+    <div class="page" id="page-history" style="display:none;">
+      <div class="page-header">
+        <div class="page-header-left">
+          <h2>Scan <span>History</span></h2>
+          <p>Record of all email analyses performed in this session.</p>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-header-icon">📋</div><div class="card-title">Session Scan Log</div><div class="card-subtitle" id="historyCount">// 0 records</div></div>
+        <div class="card-body" id="historyList">
+          <div class="db-empty-state">
+            <div class="db-empty-icon">📭</div>
+            <p>No scans recorded yet. Analyse an email to start building your history.</p>
+            <button class="btn btn-primary" style="margin-top:16px;" onclick="navigateTo('analyzer')">▶ Go to Analyzer</button>
+          </div>
+        </div>
+      </div>
+    </div><!-- /page-history -->
+
+
+    <!-- ─── PAGE: ANALYTICS ─── -->
+    <div class="page" id="page-analytics" style="display:none;">
+      <div class="page-header">
+        <div class="page-header-left">
+          <h2>Detection <span>Analytics</span></h2>
+          <p>Breakdown of threat categories and rule trigger frequency across all scans this session.</p>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-header-icon">📈</div><div class="card-title">Rule Trigger Frequency</div><div class="card-subtitle" id="analyticsSubtitle">// 0 scans analysed</div></div>
+        <div class="card-body" id="analyticsBody">
+          <div class="db-empty-state">
+            <div class="db-empty-icon">📊</div>
+            <p>Analyse emails to generate detection analytics and rule trigger statistics.</p>
+            <button class="btn btn-primary" style="margin-top:16px;" onclick="navigateTo('analyzer')">▶ Go to Analyzer</button>
+          </div>
+        </div>
+      </div>
+    </div><!-- /page-analytics -->
+
+
+    <!-- ─── PAGE: SETTINGS ─── -->
+    <div class="page" id="page-settings" style="display:none;">
+      <div class="page-header">
+        <div class="page-header-left">
+          <h2>Engine <span>Settings</span></h2>
+          <p>Configure detection thresholds, rule weights, and display preferences.</p>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header"><div class="card-header-icon">⚙️</div><div class="card-title">Detection Thresholds</div></div>
+          <div class="card-body">
+            <div style="display:flex;flex-direction:column;gap:18px;">
+              <div>
+                <div style="display:flex;justify-content:space-between;margin-bottom:8px;"><span style="font-size:13px;color:var(--text2)">Suspicious threshold</span><span style="font-family:var(--mono);font-size:12px;color:var(--warn);" id="warnVal">5 pts</span></div>
+                <input type="range" min="2" max="12" value="5" style="width:100%;accent-color:var(--warn);" oninput="document.getElementById('warnVal').textContent=this.value+' pts'">
+              </div>
+              <div>
+                <div style="display:flex;justify-content:space-between;margin-bottom:8px;"><span style="font-size:13px;color:var(--text2)">Phishing threshold</span><span style="font-family:var(--mono);font-size:12px;color:var(--danger);" id="dangerVal">10 pts</span></div>
+                <input type="range" min="6" max="20" value="10" style="width:100%;accent-color:var(--danger);" oninput="document.getElementById('dangerVal').textContent=this.value+' pts'">
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-header-icon">🎨</div><div class="card-title">Display Preferences</div></div>
+          <div class="card-body">
+            <div style="display:flex;flex-direction:column;gap:14px;">
+              <label style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;">
+                <span style="font-size:13px;color:var(--text2)">Show scan progress steps</span>
+                <input type="checkbox" checked style="accent-color:var(--cyan);width:18px;height:18px;cursor:pointer;">
+              </label>
+              <label style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;">
+                <span style="font-size:13px;color:var(--text2)">Highlight suspicious keywords</span>
+                <input type="checkbox" checked style="accent-color:var(--cyan);width:18px;height:18px;cursor:pointer;">
+              </label>
+              <label style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;">
+                <span style="font-size:13px;color:var(--text2)">Auto-scroll to results</span>
+                <input type="checkbox" checked style="accent-color:var(--cyan);width:18px;height:18px;cursor:pointer;">
+              </label>
+              <label style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;">
+                <span style="font-size:13px;color:var(--text2)">Show AI insights panel</span>
+                <input type="checkbox" checked style="accent-color:var(--cyan);width:18px;height:18px;cursor:pointer;">
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-header-icon">📘</div><div class="card-title">About PhishGuard</div></div>
+        <div class="card-body">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+            <div><p style="font-size:13px;color:var(--text2);line-height:1.8;">PhishGuard is a client-side rule-based email phishing detection engine built for CSC 320 Software Laboratory. It uses pattern matching across 8 threat categories to identify social engineering, credential theft, URL spoofing, and other phishing indicators.</p></div>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <div style="padding:10px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;display:flex;justify-content:space-between;"><span style="font-size:12px;color:var(--muted);">Version</span><span style="font-family:var(--mono);font-size:12px;color:var(--cyan);">v2.0</span></div>
+              <div style="padding:10px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;display:flex;justify-content:space-between;"><span style="font-size:12px;color:var(--muted);">Rule Sets</span><span style="font-family:var(--mono);font-size:12px;color:var(--cyan);">8</span></div>
+              <div style="padding:10px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;display:flex;justify-content:space-between;"><span style="font-size:12px;color:var(--muted);">Signatures</span><span style="font-family:var(--mono);font-size:12px;color:var(--cyan);">47</span></div>
+              <div style="padding:10px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;display:flex;justify-content:space-between;"><span style="font-size:12px;color:var(--text2);">Course</span><span style="font-family:var(--mono);font-size:12px;color:var(--cyan);">CSC 320</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div><!-- /page-settings -->
+
+  </main>
+
+  <footer class="site-footer">
+    <span>PhishGuard <span class="footer-brand">v2.0</span> · CSC 320 Software Laboratory · Rule-based + heuristic detection engine</span>
+    <span style="font-family:var(--mono);font-size:10px;">47 signatures · 8 rule categories · 94.2% accuracy</span>
+  </footer>
+
+</div><!-- /layout -->
+
+<!-- MOBILE STICKY ANALYZE BUTTON -->
+<div class="mobile-sticky-btn" id="mobileStickyBtn">
+  <button class="btn btn-primary" id="mobileAnalyzeBtn" onclick="analyze()"
+    style="width:100%;justify-content:center;padding:16px;font-size:14px;border-radius:14px;box-shadow:0 8px 30px rgba(0,215,255,0.3);">
+    <span id="mobileBtnText">▶ &nbsp;Analyze Email</span>
+  </button>
+</div>
+
+<!-- MOBILE STICKY ANALYZE BUTTON -->
+<div class="mobile-sticky-btn" id="mobileStickyBtn">
+  <button class="btn btn-primary" id="mobileAnalyzeBtn" onclick="analyze()"
+    style="width:100%;justify-content:center;padding:16px;font-size:14px;border-radius:14px;box-shadow:0 8px 30px rgba(0,215,255,0.3);">
+    <span id="mobileBtnText">▶ &nbsp;Analyze Email</span>
+  </button>
+</div>
+<script>
+/* ============================================================
+   js/rules.js
+   All phishing detection rules and tip definitions.
+   Loaded first — other scripts depend on RULES and TIPS.
+   ============================================================ */
+
+const RULES = [
+  {
+    id: 'urgency',
+    name: 'Urgent / Threatening Language',
+    severity: 'high',
+    points: 3,
+    category: 'Social Engineering',
+    why: 'Creates artificial panic to override rational thinking — a core phishing tactic used to bypass critical evaluation.',
+    patterns: [
+      /urgent/i, /immediately/i, /account.{0,20}(suspend|terminat|lock|disabl)/i,
+      /verify.{0,20}(now|immediately|today)/i, /action.{0,10}required/i,
+      /within\s+\d+\s+hours?/i, /limited time/i, /expire/i
+    ]
+  },
+  {
+    id: 'credentials',
+    name: 'Request for Sensitive Information',
+    severity: 'high',
+    points: 4,
+    category: 'Credential Theft',
+    why: 'Legitimate services never ask for passwords, PINs or card details via email. This is a near-certain indicator of phishing.',
+    patterns: [
+      /confirm.{0,20}(password|pin|card)/i,
+      /enter.{0,20}(password|credentials|login|card|account number)/i,
+      /verify.{0,20}(identity|account|password)/i,
+      /provide.{0,20}(bank|credit card|social security|ssn)/i,
+      /update.{0,20}(payment|billing|card)/i
+    ]
+  },
+  {
+    id: 'suspiciousurl',
+    name: 'Suspicious or Spoofed URL Pattern',
+    severity: 'high',
+    points: 5,
+    category: 'URL Spoofing',
+    why: 'Attackers use typosquatted or misleading domains to steal credentials on fake login pages that mimic trusted services.',
+    patterns: [
+      /paypa[l1][^a-z]/i, /g[o0]{2}gle/i, /amaz[o0]n/i,
+      /secure[-.]login/i, /account[-.]verify/i, /login[-.]secure/i,
+      /http:\/\//i, /bit\.ly|tinyurl|t\.co/i,
+      /click here/i, /\[link\]|\[url\]/i
+    ]
+  },
+  {
+    id: 'greeting',
+    name: 'Generic / Impersonal Greeting',
+    severity: 'low',
+    points: 2,
+    category: 'Mass Targeting',
+    why: 'Phishers send mass emails without personalisation — legitimate companies use your real name to address you.',
+    patterns: [
+      /dear (customer|user|client|member|account holder|valued|sir|madam)/i,
+      /hello (customer|user|friend|there)/i,
+      /greetings,?\s*(customer|user)?$/im,
+      /to whom it may concern/i
+    ]
+  },
+  {
+    id: 'offer',
+    name: 'Too-Good-to-Be-True Offer',
+    severity: 'med',
+    points: 3,
+    category: 'Bait & Lure',
+    why: 'Fake prizes and rewards are used as bait to collect personal data or redirect victims to malicious sites.',
+    patterns: [
+      /you.{0,10}(won|win|selected|chosen|winner)/i,
+      /\$[\d,]+[,\s]*(prize|reward|gift|free)/i,
+      /free.{0,20}(iphone|laptop|gift card|cash)/i,
+      /claim.{0,20}(prize|reward|winnings)/i,
+      /lottery|jackpot|congratulations.{0,30}won/i
+    ]
+  },
+  {
+    id: 'attachment',
+    name: 'Suspicious Attachment Reference',
+    severity: 'med',
+    points: 3,
+    category: 'Malware Delivery',
+    why: 'Malicious attachments are a primary malware delivery vector, often containing ransomware or macros that execute exploits.',
+    patterns: [
+      /open.{0,20}attach/i,
+      /download.{0,20}(file|document|invoice|receipt)/i,
+      /see.{0,20}attach/i,
+      /attached.{0,20}(invoice|document|file|pdf|receipt)/i,
+      /\.exe|\.zip|\.doc|\.xls/i
+    ]
+  },
+  {
+    id: 'spoofed',
+    name: 'Spoofed or Suspicious Sender',
+    severity: 'high',
+    points: 5,
+    category: 'Identity Spoofing',
+    why: 'Display names can be trivially faked — the real sending domain often reveals the deception when examined closely.',
+    patterns: [
+      /from:.{0,60}(@gmail\.com|@yahoo\.com|@hotmail\.com).{0,20}(bank|paypal|amazon|apple|microsoft|support)/i,
+      /noreply@[^a-z]/i,
+      /support@[a-z0-9-]+\.(xyz|top|tk|ml|ga|cf)/i,
+      /@[a-z0-9]+-[a-z0-9]+\.(com|net)/i
+    ]
+  },
+  {
+    id: 'grammar',
+    name: 'Poor Grammar or Unusual Phrasing',
+    severity: 'low',
+    points: 2,
+    category: 'Quality Indicator',
+    why: 'Phishing emails often originate from non-native speakers, translation tools, or automated text generators.',
+    patterns: [
+      /kindly.{0,20}do the needful/i,
+      /revert back/i,
+      /your (account|password) (have|has been) (compromize|comprimize|hacke?d?)/i,
+      /we are (bank|team) of/i,
+      /please to click/i
+    ]
+  }
+];
+
+const TIPS = [
+  { title: 'Hover before you click',               text: 'Always hover over links to preview the actual destination URL before clicking. The display text and actual URL can be completely different.' },
+  { title: 'Verify the sender domain',             text: 'The display name can be faked — check the actual email address domain carefully. "PayPal Support" could be sending from a random Gmail account.' },
+  { title: 'Never enter credentials from email links', text: 'Go directly to the website by typing the address in your browser instead of following email links.' },
+  { title: 'Enable multi-factor authentication',   text: 'MFA protects your account even if your password is compromised. Use an authenticator app rather than SMS when possible.' },
+  { title: 'Report suspicious emails',             text: "Use your email client's built-in \"Report phishing\" feature to protect other users and help train spam filters." },
+  { title: 'Verify via official channels',         text: 'If an email requests urgent action, call the company directly using a number from their official website — not any number in the email.' },
+];
+/* ============================================================
+   js/samples.js
+   Pre-written sample emails for the demo chips.
+   ============================================================ */
+
+const SAMPLES = {
+  phishing: `From: security-alert@paypa1-support.com
+Subject: URGENT: Your PayPal account has been suspended!
+
+Dear Customer,
+
+Your account has been flagged for suspicious activity and will be permanently suspended within 24 hours unless you verify your identity immediately.
+
+Click here to verify your account: http://paypal-secure-login.xyz/verify
+
+Please confirm your password and billing details to restore access. Failure to act within 24 hours will result in permanent account termination.
+
+PayPal Security Team`,
+
+  credential: `From: support@amazon-account-verify.net
+Subject: Action Required: Update your payment information
+
+Hello valued member,
+
+We've noticed an issue with your payment method. Please update your credit card details to avoid service interruption.
+
+Enter your card number, billing address and CVV at the link below within 48 hours to keep your subscription active:
+http://bit.ly/amzn-update-payment
+
+You were selected for account verification due to unusual login activity. Please provide your account credentials and social security number for identity verification.
+
+Amazon Customer Service`,
+
+  lottery: `Dear Lucky Winner,
+
+Congratulations! You have been selected as the winner of our $50,000 prize in the International Lottery Program!
+
+You won a free iPhone 15 and $10,000 cash! Claim your winnings and prize reward immediately!
+
+To claim your jackpot winnings, simply download the attached invoice.exe and provide your bank account details so we can transfer your funds.
+
+Congratulations once again on being our chosen winner!
+
+International Prize Committee`,
+
+  legit: `From: notifications@github.com
+Subject: [GitHub] Your pull request has been reviewed
+
+Hi Sarah,
+
+Peter Johnson reviewed your pull request "Fix authentication middleware" in the repository acme-corp/backend.
+
+Peter left a comment:
+"Good work on the token refresh logic. A few minor suggestions on the error handling in line 42. Otherwise this looks good to merge."
+
+View the pull request:
+https://github.com/acme-corp/backend/pull/1247
+
+You can unsubscribe from these notifications in your GitHub settings.
+
+GitHub, Inc.`
+};
+
+/**
+ * Loads a sample email into the textarea and triggers live analysis.
+ * Called by onclick on the sample chips in index.html.
+ */
+function loadSample(key) {
+  document.getElementById('emailInput').value = SAMPLES[key];
+  handleInput();
+  document.getElementById('emailInput').focus();
+}
+/* ============================================================
+   js/engine.js
+   Core detection logic: runDetection · getVerdict ·
+   live meter updates while typing.
+   Depends on: rules.js (RULES must be loaded first)
+   ============================================================ */
+
+let liveDebounce = null;
+
+/* ---- CORE DETECTION (Original engine preserved) ---- */
+
+/**
+ * Runs all RULES against the email text.
+ * Returns triggered rules array and total risk score.
+ */
+function runDetection(text) {
+  const triggered = [];
+  let score = 0;
+  for (const rule of RULES) {
+    const matched = rule.patterns.some(p => p.test(text));
+    if (matched) {
+      triggered.push(rule);
+      score += rule.points;
+    }
+  }
+  return { triggered, score };
+}
+
+/**
+ * Maps a numeric score to a verdict object.
+ * Thresholds: 0-4 = safe, 5-9 = warn, 10+ = danger
+ */
+function getVerdict(score) {
+  if (score >= 10) return {
+    type: 'danger', label: 'PHISHING', icon: '🚨',
+    desc: 'High-confidence phishing detected. Do not interact with this email, click any links, or provide any information.',
+    confidence: 'High'
+  };
+  if (score >= 5) return {
+    type: 'warn', label: 'SUSPICIOUS', icon: '⚠️',
+    desc: 'Multiple red flags detected. Treat with caution and verify through official channels before taking any action.',
+    confidence: 'Medium'
+  };
+  return {
+    type: 'safe', label: 'LEGITIMATE', icon: '✅',
+    desc: 'No significant phishing indicators found. This email appears to be legitimate based on pattern analysis.',
+    confidence: 'Low threat'
+  };
+}
+
+/* ---- LIVE METER (updates as user types) ---- */
+
+/**
+ * Called by textarea oninput. Debounces 300ms then runs a
+ * lightweight detection pass to update the live threat meter.
+ */
+function handleInput() {
+  const text = document.getElementById('emailInput').value;
+  const len  = text.length;
+  document.getElementById('charCount').textContent = len.toLocaleString() + ' chars';
+
+  clearTimeout(liveDebounce);
+  liveDebounce = setTimeout(() => {
+    if (len > 10) {
+      const { triggered, score } = runDetection(text);
+      updateLiveMeter(score, triggered);
+    } else {
+      resetLiveMeter();
+    }
+  }, 300);
+}
+
+/**
+ * Animates the circular SVG meter and mini-bars to reflect
+ * the current risk score without running the full render.
+ */
+function updateLiveMeter(score, triggered) {
+  const maxScore    = 25;
+  const pct         = Math.min(score / maxScore, 1);
+  const circumference = 314;
+  const offset      = circumference - (circumference * pct);
+
+  const fill        = document.getElementById('threatFill');
+  const scoreEl     = document.getElementById('liveScore');
+  const labelEl     = document.getElementById('liveThreatLabel');
+  const confEl      = document.getElementById('liveConfidence');
+  const meterStatus = document.getElementById('meterStatus');
+
+  let color, label, conf;
+  if (score >= 10)     { color = 'var(--danger)'; label = 'HIGH RISK';   conf = 'High confidence'; }
+  else if (score >= 5) { color = 'var(--warn)';   label = 'SUSPICIOUS';  conf = 'Medium confidence'; }
+  else if (score > 0)  { color = 'var(--cyan)';   label = 'LOW RISK';    conf = 'Monitoring'; }
+  else                 { color = 'var(--safe)';   label = 'NO THREAT';   conf = 'Clean'; }
+
+  fill.style.stroke           = color;
+  fill.style.strokeDashoffset = offset;
+  scoreEl.style.color         = color;
+  scoreEl.textContent         = score;
+  labelEl.style.color         = color;
+  labelEl.textContent         = label;
+  confEl.textContent          = conf;
+  meterStatus.textContent     = `// score: ${score} pts`;
+
+  // Map rules to the 5 indicator bars
+  const ruleMap = { urgency: 0, credentials: 1, suspiciousurl: 2, spoofed: 3 };
+  const barMaxes = [3, 4, 5, 5, 3];
+  const barVals  = [0, 0, 0, 0, 0];
+
+  for (const r of triggered) {
+    const idx = ruleMap[r.id] ?? 4;
+    barVals[idx] = Math.min(barVals[idx] + r.points, barMaxes[idx]);
+  }
+
+  for (let i = 1; i <= 5; i++) {
+    const p = (barVals[i-1] / barMaxes[i-1]) * 100;
+    document.getElementById('tbar' + i).style.width = p + '%';
+    document.getElementById('tbarv' + i).textContent = Math.round(p) + '%';
+  }
+}
+
+/** Resets meter to zero state (e.g. after clear). */
+function resetLiveMeter() {
+  document.getElementById('threatFill').style.strokeDashoffset = 314;
+  document.getElementById('threatFill').style.stroke           = 'var(--safe)';
+  document.getElementById('liveScore').textContent             = '0';
+  document.getElementById('liveScore').style.color             = 'var(--safe)';
+  document.getElementById('liveThreatLabel').textContent       = 'NO THREAT';
+  document.getElementById('liveThreatLabel').style.color       = 'var(--safe)';
+  document.getElementById('liveConfidence').textContent        = '—';
+  document.getElementById('meterStatus').textContent           = '// awaiting input';
+  for (let i = 1; i <= 5; i++) {
+    document.getElementById('tbar' + i).style.width   = '0%';
+    document.getElementById('tbarv' + i).textContent  = '0%';
+  }
+}
+/* ============================================================
+   js/render.js
+   All DOM-rendering for the results section:
+   renderResults · renderVerdictCard · renderMetrics ·
+   renderAIInsights · renderEmailPreview · renderTimeline ·
+   renderIndicators · renderURLPanel · renderTips
+   Depends on: rules.js (TIPS), engine.js (getVerdict)
+   ============================================================ */
+
+/** Master render — called once analysis is complete. */
+function renderResults(text, verdict, triggered, score) {
+  renderVerdictCard(verdict, triggered, score);
+  renderMetrics(verdict, triggered, score);
+  renderAIInsights(verdict, triggered, score);
+  renderEmailPreview(text, verdict);
+  renderTimeline(verdict);
+  renderIndicators(triggered);
+  renderURLPanel(text, triggered);
+  renderTips();
+}
+
+/* ---- VERDICT CARD ---- */
+function renderVerdictCard(verdict, triggered, score) {
+  const vc = document.getElementById('verdictCard');
+  vc.className = 'verdict-card ' + verdict.type;
+  document.getElementById('verdictIcon').textContent = verdict.icon;
+  document.getElementById('verdictName').textContent = verdict.label;
+  document.getElementById('verdictDesc').textContent = verdict.desc;
+
+  const metaItems = [
+    `${triggered.length} indicator${triggered.length !== 1 ? 's' : ''} flagged`,
+    `Risk score: ${score} / 25 pts`,
+    `Confidence: ${verdict.confidence}`
+  ];
+  document.getElementById('verdictMeta').innerHTML = metaItems
+    .map(m => `<div class="vmeta"><div class="vmeta-dot"></div>${m}</div>`)
+    .join('');
+
+  const color = verdict.type === 'safe' ? 'var(--safe)' : verdict.type === 'warn' ? 'var(--warn)' : 'var(--danger)';
+  document.getElementById('verdictScores').innerHTML = `
+    <div class="vscore">
+      <div class="vscore-num" style="color:${color}">${score}</div>
+      <div class="vscore-label">RISK SCORE</div>
+    </div>
+    <div class="vscore">
+      <div class="vscore-num" style="color:${color}">${triggered.length}</div>
+      <div class="vscore-label">FLAGS</div>
+    </div>
+    <div class="vscore">
+      <div class="vscore-num" style="color:${color}">${Math.min(Math.round(score / 25 * 100), 99)}%</div>
+      <div class="vscore-label">PHISH PROB</div>
+    </div>`;
+}
+
+/* ---- ADVANCED METRICS ---- */
+function renderMetrics(verdict, triggered, score) {
+  const phishProb = Math.min(Math.round(score / 25 * 100), 99);
+  const credRisk  = triggered.some(r => r.id === 'credentials')                ? 85 : triggered.length > 1 ? 40 : 10;
+  const urlRisk   = triggered.some(r => r.id === 'suspiciousurl')              ? 90 : 15;
+  const spoofConf = triggered.some(r => r.id === 'spoofed')                    ? 88 : 12;
+  const malRisk   = triggered.some(r => r.id === 'attachment')                 ? 75 : 8;
+  const seiRisk   = triggered.some(r => r.id === 'urgency' || r.id === 'offer')? 80 : 15;
+
+  const pick = v => v > 60 ? 'var(--danger)' : v > 30 ? 'var(--warn)' : 'var(--safe)';
+  const mainColor = verdict.type === 'safe' ? 'var(--safe)' : verdict.type === 'warn' ? 'var(--warn)' : 'var(--danger)';
+
+  const metrics = [
+    { label: 'PHISH PROBABILITY',  val: phishProb + '%', sub: 'Overall assessment',    bar: phishProb, color: mainColor     },
+    { label: 'CREDENTIAL RISK',    val: credRisk  + '%', sub: 'Theft vector risk',     bar: credRisk,  color: pick(credRisk) },
+    { label: 'URL SUSPICION',      val: urlRisk   + '%', sub: 'Link analysis',         bar: urlRisk,   color: pick(urlRisk)  },
+    { label: 'SPOOFING RISK',      val: spoofConf + '%', sub: 'Sender authenticity',   bar: spoofConf, color: pick(spoofConf)},
+    { label: 'MALWARE RISK',       val: malRisk   + '%', sub: 'Attachment risk',       bar: malRisk,   color: pick(malRisk)  },
+    { label: 'SOCIAL ENGINEERING', val: seiRisk   + '%', sub: 'Manipulation tactics',  bar: seiRisk,   color: pick(seiRisk)  }
+  ];
+
+  document.getElementById('metricsGrid').innerHTML = metrics.map(m => `
+    <div class="metric-cell">
+      <div class="metric-label">${m.label}</div>
+      <div class="metric-bar-wrap">
+        <div class="metric-bar" style="background:${m.color};width:${m.bar}%"></div>
+      </div>
+      <div class="metric-val" style="color:${m.color}">${m.val}</div>
+      <div class="metric-sub">${m.sub}</div>
+    </div>`).join('');
+
+  document.getElementById('metricsTag').textContent = `// ${phishProb}% threat probability`;
+}
+
+/* ---- AI INSIGHTS ---- */
+function renderAIInsights(verdict, triggered, score) {
+  const insights = [];
+
+  if (verdict.type === 'danger') {
+    insights.push({ icon: '🚨', bg: 'rgba(255,61,90,0.1)',
+      text: `<strong>High-confidence phishing detected.</strong> This email exhibits ${triggered.length} distinct attack indicators with a combined risk score of ${score}/25. Do not click any links or reply.` });
+  } else if (verdict.type === 'warn') {
+    insights.push({ icon: '⚠️', bg: 'rgba(255,184,0,0.1)',
+      text: `<strong>Suspicious patterns identified.</strong> ${triggered.length} red flag${triggered.length > 1 ? 's' : ''} detected. This email warrants verification before taking any action.` });
+  } else {
+    insights.push({ icon: '✅', bg: 'rgba(0,232,150,0.1)',
+      text: `<strong>No significant threats detected.</strong> This email passed all detection rule categories and appears consistent with legitimate communication patterns.` });
+  }
+
+  if (triggered.some(r => r.id === 'credentials')) {
+    insights.push({ icon: '🔐', bg: 'rgba(255,61,90,0.1)',
+      text: `<strong>Credential harvesting vector confirmed.</strong> This email contains explicit requests for sensitive authentication data — a hallmark of credential phishing attacks.` });
+  }
+  if (triggered.some(r => r.id === 'suspiciousurl')) {
+    insights.push({ icon: '🔗', bg: 'rgba(255,184,0,0.1)',
+      text: `<strong>Malicious URL patterns detected.</strong> The email contains links consistent with typosquatting or URL spoofing techniques used to redirect victims to fake login pages.` });
+  }
+  if (triggered.some(r => r.id === 'urgency')) {
+    insights.push({ icon: '⏰', bg: 'rgba(0,215,255,0.08)',
+      text: `<strong>Psychological manipulation tactic.</strong> Urgency language is designed to trigger fear responses and bypass rational evaluation — a classic social engineering technique.` });
+  }
+  if (triggered.some(r => r.id === 'spoofed')) {
+    insights.push({ icon: '🎭', bg: 'rgba(124,92,252,0.1)',
+      text: `<strong>Identity spoofing indicators present.</strong> The sender information contains patterns inconsistent with legitimate corporate email infrastructure.` });
+  }
+  if (insights.length < 3) {
+    insights.push({ icon: '🛡', bg: 'rgba(0,215,255,0.06)',
+      text: `<strong>Recommendation:</strong> Always independently verify unexpected requests by contacting the organization through official contact information — not details provided in the email.` });
+  }
+
+  document.getElementById('aiBody').innerHTML = insights.slice(0, 4).map((ins, i) => `
+    <div class="ai-insight" style="animation-delay:${i * 0.12}s">
+      <div class="ai-insight-icon" style="background:${ins.bg}">${ins.icon}</div>
+      <div class="ai-insight-text">${ins.text}</div>
+    </div>`).join('');
+}
+
+/* ---- EMAIL PREVIEW ---- */
+function renderEmailPreview(text, verdict) {
+  const lines     = text.split('\n');
+  const fromLine  = lines.find(l => /^from:/i.test(l))    || 'From: unknown@sender.com';
+  const subjLine  = lines.find(l => /^subject:/i.test(l)) || 'Subject: (No subject)';
+  const fromAddr  = fromLine.replace(/^from:\s*/i, '').trim();
+  const subject   = subjLine.replace(/^subject:\s*/i, '').trim();
+  const initials  = fromAddr.charAt(0).toUpperCase() || '?';
+  const bodyText  = lines.filter(l => !/^(from:|subject:|to:|date:)/i.test(l)).join('\n').trim();
+
+  const highlighted = bodyText
+    .replace(/(urgent|immediately|verify now|action required|expire|suspended)/gi, '<span class="highlight-danger">$1</span>')
+    .replace(/(click here|bit\.ly|http:\/\/|confirm your password|enter your)/gi, '<span class="highlight-danger">$1</span>')
+    .replace(/(dear customer|dear user|dear member|valued customer)/gi, '<span class="highlight-warn">$1</span>')
+    .replace(/\n/g, '<br>');
+
+  const avatarBg  = verdict.type === 'safe'
+    ? 'linear-gradient(135deg,var(--safe),var(--cyan2))'
+    : 'linear-gradient(135deg,var(--danger),#ff8c00)';
+  const addrColor = verdict.type === 'safe' ? 'var(--text2)' : 'var(--danger)';
+  const badge     = verdict.type !== 'safe' ? `<span class="ep-warning-badge">⚠ SUSPICIOUS</span>` : '';
+  const shortSubj = subject.length > 50 ? subject.substring(0, 50) + '…' : subject;
+  const shortAddr = fromAddr.length > 55 ? fromAddr.substring(0, 55) + '…' : fromAddr;
+
+  document.getElementById('emailPreview').innerHTML = `
+    <div class="ep-toolbar">
+      <div class="ep-dots">
+        <div class="ep-dot ep-dot-r"></div>
+        <div class="ep-dot ep-dot-y"></div>
+        <div class="ep-dot ep-dot-g"></div>
+      </div>
+      <span style="margin-left:6px;">Inbox — Mail Client Simulator</span>
+    </div>
+    <div class="ep-from">
+      <div class="ep-avatar" style="background:${avatarBg}">${initials}</div>
+      <div class="ep-sender-info">
+        <div class="ep-sender-name">${shortSubj}</div>
+        <div class="ep-sender-addr" style="color:${addrColor}">${shortAddr}</div>
+      </div>
+      ${badge}
+    </div>
+    <div class="ep-body">${highlighted || '<span style="color:var(--muted)">(No body content)</span>'}</div>`;
+}
+
+/* ---- THREAT TIMELINE ---- */
+function renderTimeline(verdict) {
+  const thresholds = { safe: 1, warn: 3, danger: 5 };
+  const active = thresholds[verdict.type];
+
+  for (let i = 1; i <= 5; i++) {
+    const el = document.getElementById('tls' + i);
+    if      (i < active)  el.className = 'tl-stage done';
+    else if (i === active) el.className = 'tl-stage active';
+    else                  el.className = 'tl-stage';
+  }
+
+  const explainMap = {
+    safe:   '<p style="font-size:13px;color:var(--safe)">✓ Email does not appear to progress past the delivery stage — no significant attack vectors detected.</p>',
+    warn:   '<p style="font-size:13px;color:var(--warn)">⚠ Email shows characteristics consistent with early hook/social engineering stages of a phishing attack.</p>',
+    danger: '<p style="font-size:13px;color:var(--danger)">🚨 Email exhibits a complete phishing attack chain — delivery, social engineering, and credential harvesting stages are all represented.</p>'
+  };
+  document.getElementById('timelineExplain').innerHTML = explainMap[verdict.type];
+}
+
+/* ---- INDICATORS LIST ---- */
+function renderIndicators(triggered) {
+  document.getElementById('indicatorCount').textContent = `// ${triggered.length} flag${triggered.length !== 1 ? 's' : ''}`;
+
+  if (triggered.length === 0) {
+    document.getElementById('indicatorsList').innerHTML = `
+      <div class="no-flags">
+        <div class="no-flags-icon">✅</div>
+        <p>No phishing indicators were detected. This email passed all 8 rule categories with 0 risk points.</p>
+      </div>`;
+    return;
+  }
+
+  document.getElementById('indicatorsList').innerHTML = triggered.map((r, i) => `
+    <div class="indicator-item ${r.severity}" style="animation-delay:${i * 0.08}s">
+      <div class="indicator-badge">${r.severity.toUpperCase()}</div>
+      <div class="indicator-content">
+        <div class="indicator-name">${r.name}</div>
+        <div class="indicator-why">${r.why}</div>
+        <div style="margin-top:6px;font-family:var(--mono);font-size:10px;color:var(--muted);">Category: ${r.category}</div>
+      </div>
+      <div class="indicator-pts">+${r.points}</div>
+    </div>`).join('');
+}
+
+/* ---- URL ANALYZER PANEL ---- */
+function renderURLPanel(text, triggered) {
+  const urlMatches  = text.match(/https?:\/\/[^\s<>"']*/gi) || [];
+  const hasUrlFlag  = triggered.some(r => r.id === 'suspiciousurl');
+
+  if (urlMatches.length === 0 && !hasUrlFlag) {
+    document.getElementById('urlPanel').innerHTML = `
+      <div style="text-align:center;padding:24px;color:var(--muted);font-size:13px;">
+        <div style="font-size:28px;margin-bottom:8px;">🔗</div>
+        No explicit URLs detected in this email content.
+      </div>`;
+    return;
+  }
+
+  if (urlMatches.length === 0 && hasUrlFlag) {
+    document.getElementById('urlPanel').innerHTML = `
+      <div class="ai-insight" style="background:rgba(255,61,90,0.05);border-color:rgba(255,61,90,0.15);">
+        <div class="ai-insight-icon" style="background:rgba(255,61,90,0.1)">⚠️</div>
+        <div class="ai-insight-text"><strong>Suspicious link patterns detected</strong> in email body text — possible obfuscated or text-formatted URLs present.</div>
+      </div>`;
+    return;
+  }
+
+  const isDangerous = u => /bit\.ly|tinyurl|t\.co|http:\/\/|paypa[l1]|secure[-.]login|account[-.]verify/.test(u);
+  const isMedium    = u => /login|secure|verify|account|update/.test(u);
+
+  document.getElementById('urlPanel').innerHTML = urlMatches.slice(0, 5).map(u => {
+    const risk  = isDangerous(u) ? 'high' : isMedium(u) ? 'med' : 'low';
+    const color = risk === 'high' ? 'var(--danger)' : risk === 'med' ? 'var(--warn)' : 'var(--safe)';
+    const label = risk === 'high' ? '🚨 HIGH RISK' : risk === 'med' ? '⚠ MODERATE' : '✓ LOW RISK';
+    const short = u.length > 45 ? u.substring(0, 45) + '…' : u;
+    return `
+      <div style="padding:10px 12px;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-left:3px solid ${color};border-radius:8px;margin-bottom:8px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+          <div style="font-family:var(--mono);font-size:11px;color:${color};word-break:break-all;">${short}</div>
+          <span style="font-family:var(--mono);font-size:9px;color:${color};background:${color}20;border:1px solid ${color}40;padding:2px 7px;border-radius:4px;white-space:nowrap;">${label}</span>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+/* ---- TIPS ---- */
+function renderTips() {
+  document.getElementById('tipsList').innerHTML = TIPS.map((t, i) => `
+    <div class="tip-item" style="animation-delay:${i * 0.07}s">
+      <span class="tip-num">0${i + 1}</span>
+      <p class="tip-text"><strong>${t.title}.</strong> ${t.text}</p>
+    </div>`).join('');
+}
+/* ============================================================
+   js/ui.js
+   UI state management: analyze flow · scanning animation ·
+   clear · activity feed · mobile nav drawer
+   Depends on: engine.js · render.js
+   ============================================================ */
+
+let scanCount   = 0;
+let threatCount = 0;
+
+/* ---- MAIN ANALYZE FLOW ---- */
+
+/**
+ * Triggered by the Analyze button or Ctrl+Enter.
+ * Runs the scanning animation, then calls the detection
+ * engine and passes results to render.js.
+ */
+function analyze() {
+  const text = document.getElementById('emailInput').value.trim();
+  if (!text) {
+    const ta = document.getElementById('emailInput');
+    ta.focus();
+    ta.style.borderBottom = '1px solid var(--danger)';
+    setTimeout(() => { ta.style.borderBottom = ''; }, 1500);
+    return;
+  }
+
+  setScanning(true);
+  animateScanSteps();
+
+  setTimeout(() => {
+    const { triggered, score } = runDetection(text);
+    const verdict = getVerdict(score);
+
+    setScanning(false);
+    resetScanSteps();
+
+    // Update header counters
+    scanCount++;
+    if (verdict.type !== 'safe') threatCount++;
+    document.getElementById('scanCount').textContent  = scanCount;
+    document.getElementById('threatCount').textContent = threatCount;
+
+    // Render all result panels
+    renderResults(text, verdict, triggered, score);
+
+    // Add entry to activity feed
+    addActivityItem(verdict, score, triggered.length);
+
+    // Show results, hide activity feed
+    document.getElementById('results-section').classList.add('visible');
+    document.getElementById('activitySection').style.display = 'none';
+
+    setTimeout(() => {
+      document.getElementById('results-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
+  }, 1600);
+}
+
+/* ---- SCANNING STATE ---- */
+
+function setScanning(active) {
+  const btn        = document.getElementById('analyzeBtn');
+  const mobileBtn  = document.getElementById('mobileAnalyzeBtn');
+  const progress   = document.getElementById('scanProgress');
+  const tagReady   = document.getElementById('tagReady');
+  const tagScanning= document.getElementById('tagScanning');
+
+  if (active) {
+    btn.disabled = mobileBtn.disabled = true;
+    document.getElementById('btnText').textContent       = '⟳ Scanning…';
+    document.getElementById('mobileBtnText').textContent = '⟳ Scanning…';
+    progress.classList.add('active');
+    tagReady.style.display    = 'none';
+    tagScanning.style.display = 'inline-block';
+    document.getElementById('engineStatus').textContent  = '// scanning...';
+  } else {
+    btn.disabled = mobileBtn.disabled = false;
+    document.getElementById('btnText').textContent       = '▶ Analyze';
+    document.getElementById('mobileBtnText').textContent = '▶ Analyze Email';
+    progress.classList.remove('active');
+    tagReady.style.display    = 'inline-block';
+    tagScanning.style.display = 'none';
+    document.getElementById('engineStatus').textContent  = '// engine ready';
+  }
+}
+
+function animateScanSteps() {
+  const steps  = ['step1','step2','step3','step4','step5'];
+  const delays = [200, 500, 800, 1100, 1300];
+  steps.forEach((s, i) => {
+    setTimeout(() => {
+      document.getElementById(s).className = 'scan-step active';
+      document.getElementById('scanBarFill').style.width = ((i + 1) / 5 * 100) + '%';
+      if (i > 0) document.getElementById(steps[i - 1]).className = 'scan-step done';
+    }, delays[i]);
+  });
+}
+
+function resetScanSteps() {
+  ['step1','step2','step3','step4','step5'].forEach(s => {
+    document.getElementById(s).className = 'scan-step';
+  });
+  document.getElementById('scanBarFill').style.width = '0%';
+}
+
+/* ---- CLEAR ---- */
+
+function clearAll() {
+  document.getElementById('emailInput').value = '';
+  document.getElementById('charCount').textContent = '0 chars';
+  document.getElementById('results-section').classList.remove('visible');
+  document.getElementById('activitySection').style.display = '';
+  resetLiveMeter();
+  document.getElementById('emailInput').focus();
+}
+
+/* ---- ACTIVITY FEED ---- */
+
+function addActivityItem(verdict, score, flags) {
+  const feed   = document.getElementById('activityFeed');
+  const typeMap = {
+    safe:   { color: 'var(--safe)',   text: `Scan complete — <strong>No threats detected</strong> (score: ${score})` },
+    warn:   { color: 'var(--warn)',   text: `Scan complete — <strong>Suspicious email</strong> detected, ${flags} indicator${flags !== 1 ? 's' : ''} (score: ${score})` },
+    danger: { color: 'var(--danger)', text: `Scan complete — <strong>PHISHING detected</strong>, ${flags} indicators (score: ${score})` }
+  };
+  const item    = typeMap[verdict.type];
+  const newItem = document.createElement('div');
+  newItem.className = 'activity-item';
+  newItem.style.animation = 'fadeSlide 0.3s ease';
+  newItem.innerHTML = `
+    <div class="activity-dot" style="background:${item.color}"></div>
+    <div class="activity-text">${item.text}</div>
+    <div class="activity-time">just now</div>`;
+  feed.insertBefore(newItem, feed.firstChild);
+}
+
+/* ---- MOBILE NAV ---- */
+
+function openNav() {
+  document.getElementById('navOverlay').classList.add('open');
+  document.getElementById('mobileSidebar').classList.add('open');
+}
+
+function closeNav() {
+  document.getElementById('navOverlay').classList.remove('open');
+  document.getElementById('mobileSidebar').classList.remove('open');
+}
+/* ============================================================
+   js/router.js
+   Handles page navigation: shows/hides the correct .page
+   section and keeps the active nav-item state in sync across
+   the desktop sidebar and mobile sidebar.
+   Depends on: ui.js (closeNav) — but works fine even if that
+   hasn't loaded yet, since navigateTo is only ever called from
+   a click, not at script-load time.
+   ============================================================ */
+
+const PAGES = [
+  'analyzer', 'dashboard', 'threatfeed', 'urlanalyzer',
+  'attachment', 'header', 'history', 'analytics', 'settings'
+];
+
+/**
+ * Switches the visible page and updates nav active states.
+ * Called via inline onclick="navigateTo('pagename')" from both
+ * the desktop sidebar links and the mobile sidebar links.
+ */
+function navigateTo(page) {
+  if (!PAGES.includes(page)) {
+    console.warn(`navigateTo: unknown page "${page}"`);
+    return;
+  }
+
+  // Show the target page, hide every other one
+  PAGES.forEach(p => {
+    const el = document.getElementById('page-' + p);
+    if (el) el.style.display = (p === page) ? '' : 'none';
+  });
+
+  // Sync the "active" class across every nav-item in BOTH
+  // the desktop sidebar and the mobile sidebar
+  document.querySelectorAll('.nav-item').forEach(item => {
+    item.classList.toggle('active', item.dataset.page === page);
+  });
+
+  // Reset scroll position so the new page opens at the top
+  const main = document.getElementById('mainContent');
+  if (main) main.scrollTop = 0;
+  window.scrollTo(0, 0);
+
+  // Safety net: always close the mobile drawer after navigating,
+  // even if the calling link forgot to do it itself
+  if (typeof closeNav === 'function') closeNav();
+}
+
+// Explicitly attach to window. Inline onclick="" attributes can
+// only resolve functions that exist in global scope, so this
+// line is what actually makes every nav link work.
+window.navigateTo = navigateTo;
+/* ============================================================
+   js/main.js
+   Entry point — runs after all other scripts are loaded.
+   Binds global keyboard shortcuts and any one-time init.
+   ============================================================ */
+
+document.addEventListener('DOMContentLoaded', () => {
+
+  // Ctrl+Enter / Cmd+Enter triggers analyze from anywhere
+  document.getElementById('emailInput').addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      analyze();
+    }
+  });
+
+  // Escape closes mobile nav
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeNav();
+  });
+
+});
+</script>
+</body>
+</html>
